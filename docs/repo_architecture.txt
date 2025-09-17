@@ -1,0 +1,39 @@
+medi-agent/
+│── docs/                     # Project documentation, meeting notes, diagrams
+│   ├── architecture.md
+│   ├── api_design.md
+│
+│── app/                      # Flutter/Kotlin mobile app
+│   ├── lib/
+│   ├── assets/
+│   └── test/
+│
+│── backend/                  # FastAPI backend + API gateway
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── routers/
+│   ├── models/
+│   ├── db/
+│   └── tests/
+│
+│── agents/                   # AI agents (LangChain, LangGraph, OCR, etc.)
+│   ├── diagnosis_agent/
+│   ├── ocr_agent/
+│   ├── qa_agent/
+│   ├── booking_agent/
+│   └── utils/
+│
+│── ml/                       # ML experiments, training, fine-tuning
+│   ├── notebooks/
+│   ├── models/
+│   ├── datasets/
+│   └── scripts/
+│
+│── infra/                    # Deployment & cloud setup
+│   ├── docker/
+│   ├── kubernetes/
+│   └── ci-cd/
+│
+│── .gitignore
+│── README.md
+│── requirements.txt          # Root-level dependencies (if needed)
