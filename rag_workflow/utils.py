@@ -17,3 +17,16 @@ def check_query_category(state: State):
         return 'general_query_node'
     else:
         END
+
+def check_query_category(state: State) -> str:
+    """This function return node for the current category."""
+    category = state['category']
+    # print("this is categoty -> ", category)
+    if category == 'emergency':
+        return 'emergency_node'
+    elif category == 'diagnostic':
+        return 'diagnostic_node'
+    elif category == 'medicine_info':
+        return 'medicine_info'
+    else:
+        return 'general'
