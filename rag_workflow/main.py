@@ -4,14 +4,13 @@ from typing import Annotated, Optional
 
 from langgraph.graph import StateGraph, START, END 
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
 
 from dotenv import load_dotenv
 
 from utils import get_mongo_connection, check_query_category
-from models.models import chat_node_model
 from schema.schema import State
 from node.node import refiner, classifier, general_query_node
+from models.models import tool_node, tools_condition
 
 from langchain_core.messages import AIMessage, AIMessageChunk
 
@@ -28,15 +27,8 @@ except Exception as e:
 
 
 # async mongodb connection
-# connection = get_mongo_connection(MONGODB_URL, MONGODB_NAME, MONGODB_COLLECTION_NAME)
+# connection = get_mongo_connection(MONGODB_URL, MONGODB_NAME, MONGODB_COLLECTION_NAME
 
-
-#---------------model_with_tools------------------------
-tools = []
-
-tool_node = ToolNode(tools)
-
-model_with_tools = chat_node_model.bind_tools(tools)
 
     
 
@@ -54,17 +46,31 @@ builder.add_node('tools', tool_node)
 builder.add_edge(START, 'refiner')
 builder.add_edge('refiner', 'classifier')
 builder.add_conditional_edges('classifier', check_query_category)
-# builder.add_edge('general_query_node', tools_condition)
+#  builder.add_edge('general_query_node', tools_condition)
 # builder.add_edge('tools', 'general_query_node')
-builder.add_edge('general', END)
+builder.add_conditional_edges('general', tools_condition)
+builder.add_edge('tools', 'general')
+
 
 graph = builder.compile()
 
 config={'configurable': {'thread_id': '1'}}
 
-
-if "__name__" == "__name__":
-    for chunk, metadata in  graph.stream({'query': 'hello how are you?'}, config=config, stream_mode='messages'):
+def main(graph, config):
+    for chunk, metadata in graph.stream({'query': 'how to stay healthy?'}, config=config, stream_mode='messages'):
+        # print("metadata", metadata)
         if isinstance(chunk, (AIMessage, AIMessageChunk)):
-            print(chunk.content)
+            if metadata['langgraph_node'] == 'general':
+                yield(chunk.content)
+
+
+if __name__ == "__main__":
+    # def
+    # for chunk, metadata in  graph.stream({'query': 'hi my name is jora'}, config=config, stream_mode='messages'):
+    #     if isinstance(chunk, (AIMessage, AIMessageChunk)):
+    #         print(chunk.content)
+    #     # pass
+    # fn = main(graph=graph, config=config)
+    for m in main(graph=graph, config=config):
+        print(m, end="", flush=True)
         # pass
