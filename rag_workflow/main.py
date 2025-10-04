@@ -7,7 +7,7 @@ from langgraph.graph.message import add_messages
 
 from dotenv import load_dotenv
 
-from utils import get_mongo_connection, check_query_category
+from utils import  check_query_category
 from schema.schema import State
 from node.node import refiner, classifier, general_query_node
 from models.models import tool_node, tools_condition
