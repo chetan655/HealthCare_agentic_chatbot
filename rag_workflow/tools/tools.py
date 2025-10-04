@@ -14,9 +14,9 @@ def calculator(a: float, b: float, operation: str) -> float | str:
     """
     print("Calculator activated")
 
-    print("a", a)
-    print("b", b)
-    print("operation", operation)
+    # print("a", a)
+    # print("b", b)
+    # print("operation", operation)
     
     operation = operation.lower()  # normalize input
     
