@@ -31,9 +31,16 @@ async def refiner(state: State) -> State:
 async def classifier(state: State) -> State:
     """This function returns the category of the question."""
     # print("classifier actiavated")
-    question = state['messages'][-1].content
+    # question = state['messages'][-1].content
     # print("this is classiier -> ", state['messages'])
     # print("question -> ", question)
+    messages = state.get('messages', []) # Safely get messages
+    if not messages:
+        # Handle the case where there are no messages.
+        # This could return a default category or raise a specific error.
+        return {'category': 'general'} # Example: route to general if history is empty
+
+    question = messages[-1].content
     try: 
         chain = classifier_prompt | classifier_model 
         res = await chain.ainvoke({'question': question})
@@ -52,12 +59,12 @@ async def general_query_node(state: State, config) -> State:
         state['messages'],
         strategy='last',
         token_counter=count_tokens_approximately,
-        max_tokens=128
+        max_tokens=50
     )
     # print("this is msgt -> ", messages)
     try:
         chain = general_query_prompt | base_model_with_tools 
-        res = await chain.ainvoke({'question': question}, config=config)
+        res = await chain.ainvoke({'question': messages}, config=config)
         """we only provide config to async model invoke if if python version < 3.11. this enable streaming"""
         # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
         # print("output of res -> ", res)
@@ -65,4 +72,3 @@ async def general_query_node(state: State, config) -> State:
         return {'messages': [res]}
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
-
