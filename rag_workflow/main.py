@@ -54,23 +54,23 @@ builder.add_edge('tools', 'general')
 
 graph = builder.compile()
 
-config={'configurable': {'thread_id': '1'}}
+# config={'configurable': {'thread_id': '1'}}
 
-def main(graph, config):
-    for chunk, metadata in graph.stream({'query': 'how to stay healthy?'}, config=config, stream_mode='messages'):
-        # print("metadata", metadata)
-        if isinstance(chunk, (AIMessage, AIMessageChunk)):
-            if metadata['langgraph_node'] == 'general':
-                yield(chunk.content)
+# def main(graph, config):
+#     for chunk, metadata in graph.stream({'query': 'how to stay healthy?'}, config=config, stream_mode='messages'):
+#         # print("metadata", metadata)
+#         if isinstance(chunk, (AIMessage, AIMessageChunk)):
+#             if metadata['langgraph_node'] == 'general':
+#                 yield(chunk.content)
 
 
-if __name__ == "__main__":
-    # def
-    # for chunk, metadata in  graph.stream({'query': 'hi my name is jora'}, config=config, stream_mode='messages'):
-    #     if isinstance(chunk, (AIMessage, AIMessageChunk)):
-    #         print(chunk.content)
-    #     # pass
-    # fn = main(graph=graph, config=config)
-    for m in main(graph=graph, config=config):
-        print(m, end="", flush=True)
-        # pass
+# if __name__ == "__main__":
+#     # def
+#     # for chunk, metadata in  graph.stream({'query': 'hi my name is jora'}, config=config, stream_mode='messages'):
+#     #     if isinstance(chunk, (AIMessage, AIMessageChunk)):
+#     #         print(chunk.content)
+#     #     # pass
+#     # fn = main(graph=graph, config=config)
+#     for m in main(graph=graph, config=config):
+#         print(m, end="", flush=True)
+#         # pass

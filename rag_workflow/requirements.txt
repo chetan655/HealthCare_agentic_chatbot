@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+
+
+langgraph
+langchain
+langchain-core
+
+langchain-google-genai
+langchain-huggingface
+langchain-groq
+
+pydantic
+
+python-dotenv
+
