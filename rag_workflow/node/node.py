@@ -1,8 +1,13 @@
 from schema.schema import State
 from prompts.prompt import refiner_prompt, classifier_prompt, general_query_prompt
-from models.models import refiner_model, classifier_model, base_model
+from models.models import refiner_model, classifier_model, base_model, base_model_with_tools, groq_llm_for_general_with_tools
+# from utils import sanitize_ai_message
 
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages.utils import (
+    trim_messages,
+    count_tokens_approximately
+)
 
 parser = StrOutputParser()
 
@@ -13,11 +18,10 @@ def refiner(state: State) -> State:
     # print("query -> ", question)
     try:
         chain = refiner_prompt | refiner_model 
-        print("a")
         res = chain.invoke({'question': question})
-        print("b", res.content)
+        # print("res", res)
         # res = {'role': 'user', 'content': res.content}
-        return {'messages': [res.content]}
+        return {'messages': [res]}
     except Exception as e:
         return f"Error refining query: {e}"  # 
     # finally:
@@ -28,6 +32,7 @@ def classifier(state: State) -> State:
     """This function returns the category of the question."""
     # print("classifier actiavated")
     question = state['messages'][-1].content
+    # print("this is classiier -> ", state['messages'])
     # print("question -> ", question)
     try: 
         chain = classifier_prompt | classifier_model 
@@ -41,12 +46,15 @@ def classifier(state: State) -> State:
     
 def general_query_node(state: State) -> State:
     """This function returns answer to general query."""
-    question = state['messages'][-1].content   # last message later to change
+    question = state['messages']   # last message later to change
     # print("question to general: ", question)
     try:
-        chain = general_query_prompt | base_model | parser 
+        chain = general_query_prompt | groq_llm_for_general_with_tools 
         res = chain.invoke({'question': question})
-        # print("output of general -> ", res)
+        # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
+        # print("output of res -> ", res)
+        # print("output of clean_response -> ", clean_res)
         return {'messages': [res]}
     except Exception as e:
         return f"Error general_query_node: {e}"
+

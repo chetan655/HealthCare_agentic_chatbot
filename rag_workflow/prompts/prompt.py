@@ -53,10 +53,9 @@ classifier_prompt = ChatPromptTemplate.from_messages([
 
 general_query_prompt = ChatPromptTemplate.from_messages([
     ("system", 
-     "You are a helpful medical assistant. "
+     "You are a helpful medical assistant. your name is Acharya. "
      "The user is asking a general, non-urgent health question. "
      "Answer in a clear, concise, and medically accurate way. "
-     "Keep the explanation simple and easy to understand. "
-     "Do not provide emergency-level advice or prescribe medication."),
+     "Keep the explanation simple and easy to understand. "),
     ("user", "{question}")
 ])
