@@ -31,7 +31,7 @@ refiner_prompt = ChatPromptTemplate.from_messages([
      "Expand abbreviations, fix grammar, remove vagueness, and preserve intent. Do NOT give advice or add facts. "
      "If multiple questions, combine or pick the main one. Output ONLY the refined question."
     ),
-    ("user", "{question}")
+    ("user", "Here is the user question refine it DO NOT ANSWER, just refine. Question: - {question}")
 ])
 
 
@@ -41,14 +41,26 @@ classifier_prompt = ChatPromptTemplate.from_messages([
     ("system", 
      "You are a medical triage classifier. "
      "Classify the user’s question into exactly one of these categories:\n\n"
-     "1. general – routine, lifestyle, or preventive health questions.\n"
+     "1. general – routine, lifestyle, or preventive health questions. questions about medications, dosage, side effects, or interactions,  questions about symptoms or causes of a condition\n"
      "2. emergency – urgent, life-threatening, or severe cases requiring immediate attention.\n"
-     "3. diagnostic – questions about symptoms or causes of a condition.\n"
-     "4. medicine_info – questions about medications, dosage, side effects, or interactions.\n\n"
+     "3. diagnostic – none .\n"
+     "4. medicine_info  none\n\n"
      "Your output must be exactly one of: 'general', 'emergency', 'diagnostic', 'medicine_info'. "
      "Do not explain, just output the category."),
     ("user", "{question}")
 ])
+# classifier_prompt = ChatPromptTemplate.from_messages([
+#     ("system", 
+#      "You are a medical triage classifier. "
+#      "Classify the user’s question into exactly one of these categories:\n\n"
+#      "1. general – routine, lifestyle, or preventive health questions.\n"
+#      "2. emergency – urgent, life-threatening, or severe cases requiring immediate attention.\n"
+#      "3. diagnostic – questions about symptoms or causes of a condition.\n"
+#      "4. medicine_info – questions about medications, dosage, side effects, or interactions.\n\n"
+#      "Your output must be exactly one of: 'general', 'emergency', 'diagnostic', 'medicine_info'. "
+#      "Do not explain, just output the category."),
+#     ("user", "{question}")
+# ])
 
 
 general_query_prompt = ChatPromptTemplate.from_messages([
@@ -56,6 +68,6 @@ general_query_prompt = ChatPromptTemplate.from_messages([
      "You are a helpful medical assistant. your name is Acharya. "
      "The user is asking a general, non-urgent health question. "
      "Answer in a clear, concise, and medically accurate way. "
-     "Keep the explanation simple and easy to understand. "),
+     "Keep the explanation simple and easy to understand.  ask as follow up question"),
     ("user", "{question}")
 ])
