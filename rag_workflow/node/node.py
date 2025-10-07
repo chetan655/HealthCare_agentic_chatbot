@@ -63,7 +63,7 @@ async def general_query_node(state: State, config) -> State:
     )
     # print("this is msgt -> ", messages)
     try:
-        chain = general_query_prompt | base_model_with_tools 
+        chain = general_query_prompt | groq_llm_for_general_with_tools 
         res = await chain.ainvoke({'question': messages}, config=config)
         """we only provide config to async model invoke if if python version < 3.11. this enable streaming"""
         # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
