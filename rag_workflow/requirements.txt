@@ -10,6 +10,8 @@ langchain-google-genai
 langchain-huggingface
 langchain-groq
 
+langgraph-checkpoint-mongodb
+
 pydantic
 
 python-dotenv
