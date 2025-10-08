@@ -16,7 +16,7 @@ tools = [calculator]
 tool_node = ToolNode(tools)
 
 llm = HuggingFaceEndpoint(
-    repo_id='Qwen/Qwen3-VL-235B-A22B-Instruct'
+    repo_id='openai/gpt-oss-120b'
 )
 refiner_model = ChatHuggingFace(
     llm=llm

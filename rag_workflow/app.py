@@ -14,6 +14,7 @@ app = FastAPI()
 
 class ChatSchema(BaseModel):
     question: str 
+    thread_id: str
 
 try:
     load_dotenv()
@@ -30,7 +31,8 @@ async def home():
 @app.post("/chat")
 async def chat(chatschema: ChatSchema):
     question = chatschema.question
-    config = {'configurable': {'thread_id': '12'}}
+    thread_id = chatschema.thread_id
+    config = {'configurable': {'thread_id': thread_id}}
 
     async def fn():
         async with AsyncMongoDBSaver.from_conn_string(conn_string=MONGODB_URL) as checkpointer:

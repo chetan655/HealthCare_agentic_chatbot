@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 
+import uuid
+
 # --- Page setup ---
 st.set_page_config(page_title="Healthcare Chatbot (Under Development)", page_icon="💬", layout="centered")
 
@@ -31,11 +33,14 @@ if prompt := st.chat_input("Type your message..."):
 
         # --- Spinner during backend response ---
         with st.spinner("💭 Thinking..."):
+            if 'thread_id' not in st.session_state:
+                st.session_state.thread_id = str(uuid.uuid4())
+            thread_id = st.session_state.thread_id
             try:
                 # --- Stream tokens from backend ---
                 with requests.post(
                     "https://healthcare-agentic-chatbot.onrender.com/chat",
-                    json={"question": prompt},
+                    json={"question": prompt, "thread_id": thread_id},
                     stream=True,     # <-- enable streaming
                     timeout=120
                 ) as response:
