@@ -35,7 +35,7 @@ if prompt := st.chat_input("Type your message..."):
                 # --- Stream tokens from backend ---
                 with requests.post(
                     "https://healthcare-agentic-chatbot.onrender.com/chat",
-                    json={"query": prompt},
+                    json={"question": prompt},
                     stream=True,     # <-- enable streaming
                     timeout=120
                 ) as response:
