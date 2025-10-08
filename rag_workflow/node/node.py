@@ -14,12 +14,12 @@ parser = StrOutputParser()
 async def refiner(state: State) -> State:
     """This function refine the user query. remove ambiguity"""
     # print("refiner actiavted")
-    question = state['query']
-    # print("query -> ", question)
+    question = state['question']
+    print("query -> ", question)
     try:
         chain = refiner_prompt | refiner_model 
         res = await chain.ainvoke({'question': question})
-        # print("res", res)
+        print("res", res)
         # res = {'role': 'user', 'content': res.content}
         return {'messages': [res]}
     except Exception as e:
@@ -34,18 +34,19 @@ async def classifier(state: State) -> State:
     # question = state['messages'][-1].content
     # print("this is classiier -> ", state['messages'])
     # print("question -> ", question)
-    messages = state.get('messages', []) # Safely get messages
-    if not messages:
-        # Handle the case where there are no messages.
-        # This could return a default category or raise a specific error.
-        return {'category': 'general'} # Example: route to general if history is empty
-
-    question = messages[-1].content
+    question = state.get('question')
+    # messages = state.get('messages', []) # Safely get messages
+    # if not messages:
+    #     # Handle the case where there are no messages.
+    #     # This could return a default category or raise a specific error.
+    #     return {'category': 'general'} # Example: route to general if history is empty
+    # print("this is question -> ", question)
+    # question = question[-1].content
     try: 
         chain = classifier_prompt | classifier_model 
         res = await chain.ainvoke({'question': question})
         # print("response -> ", res)
-        return {'category': res.category}
+        return {'category': res.category, 'messages': [question]}
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
     # finally:
@@ -59,7 +60,7 @@ async def general_query_node(state: State, config) -> State:
         state['messages'],
         strategy='last',
         token_counter=count_tokens_approximately,
-        max_tokens=50
+        max_tokens=100
     )
     # print("this is msgt -> ", messages)
     try:

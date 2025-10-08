@@ -9,6 +9,7 @@ from langgraph.graph import MessagesState
 # state schema
 class State(MessagesState):
     query: str
+    question: str
     # messages: Annotated[list[BaseMessage], add_messages]
     # messages: Annotated[list[dict[str, str]], add_messages]
     last_messages: list[str]  # later to change to BaseMessge
