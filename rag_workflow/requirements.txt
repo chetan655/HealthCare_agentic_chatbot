@@ -9,6 +9,7 @@ langchain-core
 langchain-google-genai
 langchain-huggingface
 langchain-groq
+langchain-tavily
 
 langgraph-checkpoint-mongodb
 
