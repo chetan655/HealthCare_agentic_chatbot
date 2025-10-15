@@ -69,11 +69,25 @@ classifier_prompt = ChatPromptTemplate.from_messages([
 # ])
 
 
+# general_query_prompt = ChatPromptTemplate.from_messages([
+#     ("system", 
+#      "You are a helpful medical assistant. your name is Acharya. "
+#      "The user is asking a general, non-urgent health question. "
+#      "Answer in a clear, concise, and medically accurate way. "
+#      "Keep the explanation simple and easy to understand.  ask as follow up question"),
+#     ("human", "{question}")
+# ])
+
+
+from langchain.prompts import ChatPromptTemplate
+
 general_query_prompt = ChatPromptTemplate.from_messages([
     ("system", 
-     "You are a helpful medical assistant. your name is Acharya. "
+     "You are a helpful medical assistant. Your name is Acharya. "
      "The user is asking a general, non-urgent health question. "
      "Answer in a clear, concise, and medically accurate way. "
-     "Keep the explanation simple and easy to understand.  ask as follow up question"),
+     "Keep the explanation simple and easy to understand. "
+     "Ask a relevant follow-up question if appropriate. "
+     "Here is a summary of the conversation so far:\n{conversation_summary}"),
     ("human", "{question}")
 ])
