@@ -1,4 +1,10 @@
 from langchain_core.tools import tool 
+from langchain_tavily import TavilySearch
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 
@@ -32,3 +38,27 @@ def calculator(a: float, b: float, operation: str) -> float | str:
         return a / b
     else:
         return f"Operation '{operation}' not supported."
+
+    
+
+#==================== web search tool ======================================
+# to do handle error
+
+
+tavily_search = TavilySearch(max_results=3)
+    
+
+@tool 
+def search(query: str) -> str:
+    """Takes a query and perform web search"""
+    res = tavily_search.invoke(query)
+
+    l = ""
+    for i in res['results']:
+        l = l + i['content']
+
+    l = l[:500]
+
+    # print("this is l", l)
+
+    return l

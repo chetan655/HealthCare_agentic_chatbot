@@ -4,15 +4,16 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_groq import ChatGroq
 
 
-from tools.tools import calculator
+from tools.tools import calculator, search
 from schema.schema import ClassifierModelSchema
+
 
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-tools = [calculator]
+tools = [calculator, search]
 tool_node = ToolNode(tools)
 
 llm = HuggingFaceEndpoint(
@@ -21,6 +22,12 @@ llm = HuggingFaceEndpoint(
 refiner_model = ChatHuggingFace(
     llm=llm
 )
+
+summarizer_llm = HuggingFaceEndpoint(
+    # repo_id='openai/gpt-oss-120b'
+    repo_id='Qwen/Qwen3-Next-80B-A3B-Instruct'
+)
+summary_model = ChatHuggingFace(llm=summarizer_llm)
 
 
 # we are taking base model as gemini-2.0-flash

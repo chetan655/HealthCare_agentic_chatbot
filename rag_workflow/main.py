@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from utils import  check_query_category
 from schema.schema import State
-from node.node import refiner, classifier, general_query_node
+from node.node import refiner, classifier, general_query_node, summarize_conv
 from models.models import tool_node, tools_condition
 
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -43,9 +43,11 @@ builder = StateGraph(State)
 builder.add_node('refiner', refiner)
 builder.add_node('classifier', classifier)
 builder.add_node('general', general_query_node)
+builder.add_node('summarize_conv', summarize_conv)
 builder.add_node('tools', tool_node)
 
-builder.add_edge(START, 'classifier')
+builder.add_edge(START, 'summarize_conv')
+builder.add_edge('summarize_conv', 'classifier')
 # builder.add_edge('refiner', 'classifier')
 builder.add_conditional_edges('classifier', check_query_category)
 #  builder.add_edge('general_query_node', tools_condition)
