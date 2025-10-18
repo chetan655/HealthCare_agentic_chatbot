@@ -4,9 +4,6 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate)
 
 
-
-from langchain_core.prompts  import ChatPromptTemplate
-
 # refiner_prompt = ChatPromptTemplate.from_messages([
 #     ("system", 
 #      "You are a question refiner. Rewrite the user's input into one clear, single-sentence question. "
@@ -78,9 +75,6 @@ classifier_prompt = ChatPromptTemplate.from_messages([
 #     ("human", "{question}")
 # ])
 
-
-from langchain.prompts import ChatPromptTemplate
-
 # general_query_prompt = ChatPromptTemplate.from_messages([
 #     ("system", 
 #      "You are a helpful medical assistant. Your name is Acharya. "
@@ -92,8 +86,6 @@ from langchain.prompts import ChatPromptTemplate
 #      "Recent messages:\n{recent_context}"),
 #     ("human", "{question}")
 # ])
-
-from langchain.prompts import ChatPromptTemplate
 
 general_query_prompt = ChatPromptTemplate.from_messages([
     (
