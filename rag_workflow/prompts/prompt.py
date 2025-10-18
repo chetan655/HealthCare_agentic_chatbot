@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 
 
 
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts  import ChatPromptTemplate
 
 # refiner_prompt = ChatPromptTemplate.from_messages([
 #     ("system", 
