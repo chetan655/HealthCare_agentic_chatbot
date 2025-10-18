@@ -23,20 +23,28 @@ refiner_model = ChatHuggingFace(
     llm=llm
 )
 
-summarizer_llm = HuggingFaceEndpoint(
-    # repo_id='openai/gpt-oss-120b'
-    repo_id='Qwen/Qwen3-Next-80B-A3B-Instruct'
-)
-summary_model = ChatHuggingFace(llm=summarizer_llm)
+# summarizer_llm = HuggingFaceEndpoint(
+#     # repo_id='openai/gpt-oss-120b'
+#     repo_id='Qwen/Qwen3-Next-80B-A3B-Instruct'
+# )
+# summary_model = ChatHuggingFace(llm=summarizer_llm)
 
 
 # we are taking base model as gemini-2.0-flash
+
+# summary_model = ChatGoogleGenerativeAI(
+#     model='gemini-2.0-flash'
+# )
 
 base_model = ChatGoogleGenerativeAI(
     model='gemini-2.0-flash'
 )
 
 groq_llm = ChatGroq(
+    model='openai/gpt-oss-120b'
+)
+
+summary_model = ChatGroq(
     model='openai/gpt-oss-120b'
 )
 

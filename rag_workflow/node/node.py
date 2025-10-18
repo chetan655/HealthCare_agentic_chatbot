@@ -1,5 +1,11 @@
 from schema.schema import State
-from prompts.prompt import refiner_prompt, classifier_prompt, general_query_prompt
+from prompts.prompt import (
+    refiner_prompt, 
+    classifier_prompt, 
+    general_query_prompt,
+    emergency_query_prompt,
+    formatter_prompt
+)
 from models.models import (
     refiner_model, classifier_model, 
     base_model, base_model_with_tools, 
@@ -13,7 +19,7 @@ from langchain_core.messages.utils import (
     trim_messages,
     count_tokens_approximately
 )
-from langchain_core.messages import RemoveMessage, HumanMessage
+from langchain_core.messages import RemoveMessage, HumanMessage, SystemMessage
 
 parser = StrOutputParser()
 
@@ -40,24 +46,12 @@ async def refiner(state: State) -> State:
 #=========================================classifier==================================
 async def classifier(state: State) -> State:
     """This function returns the category of the question."""
-    # print("classifier actiavated")
-    # question = state['messages'][-1].content
-    # print("this is classiier -> ", state['messages'])
-    # print("question -> ", question)
-    question = state.get('question')
 
-    print("this is quesstion", question)
-    # messages = state.get('messages', []) # Safely get messages
-    # if not messages:
-    #     # Handle the case where there are no messages.
-    #     # This could return a default category or raise a specific error.
-    #     return {'category': 'general'} # Example: route to general if history is empty
-    # print("this is question -> ", question)
-    # question = question[-1].content
+    question = state.get('question')
     try: 
         chain = classifier_prompt | classifier_model 
         res = await chain.ainvoke({'question': question})
-        # print("response -> ", res)
+        print("response -> ", res)
         return {'category': res.category, 'messages': [question]}
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
@@ -70,24 +64,50 @@ async def classifier(state: State) -> State:
     
 async def general_query_node(state: State, config) -> State:
     """This function returns answer to general query."""
-    question = state['messages']   # last message later to change
+    print("general node activated.")
+    question = state.get('question', "")
+    summary = state.get("summary", "")
     # print("question to general: ", question)
-    messages = trim_messages(
-        state['messages'],
-        strategy='last',
-        token_counter=count_tokens_approximately,
-        max_tokens=100
-    )
-
-    summary = state['summary']
+    # messages = trim_messages(
+    #     state['messages'],
+    #     strategy='last',
+    #     token_counter=count_tokens_approximately,
+    #     max_tokens=100
+    # )
     # print("this is msgt -> ", messages)
     try:
         chain = general_query_prompt | groq_llm_for_general_with_tools 
-        res = await chain.ainvoke({'question': messages, "conversation_summary": summary}, config=config)
+        res = await chain.ainvoke({"summary": summary, 'question': question}, config=config)
         """we only provide config to async model invoke if if python version < 3.11. this enable streaming"""
         # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
         # print("output of res -> ", res)
         # print("output of clean_response -> ", clean_res)
+        # print("res from general", res)
+        return {'messages': [res]}
+    except Exception as e:
+        return {'error': f"Error refining query: {e}"}
+    
+    
+    
+#==============================emergency query node=====================================
+    
+async def emergency_query_node(state: State, config) -> State:
+    """This function is to answer emergency quesions."""
+    print("emergency node activated.")
+    question = state.get("question", "")
+    summary = state.get("summary", "")
+    
+    # messages = trim_messages(
+    #     state['messages'],
+    #     strategy='last',
+    #     token_counter=count_tokens_approximately,
+    #     max_tokens=100
+    # )
+    # print("this is msgt -> ", messages)
+    try:
+        chain = emergency_query_prompt | groq_llm_for_general_with_tools 
+        res = await chain.ainvoke({"summary": summary, 'question': question}, config=config)
+        # print("res from emergency", res)
         return {'messages': [res]}
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
@@ -96,23 +116,66 @@ async def general_query_node(state: State, config) -> State:
 
 #=====================================summary======================================
 
-def summarize_conv(state: State) -> State:
+async def summarize_conv(state: State) -> State:
 
     summary = state.get("summary", "")
+    messages = state.get("messages", "")
+
+    transcript_only = ""
+
+    if len(messages) >=1 :
+        for i in messages:
+            transcript_only += i.content
+
+    # print("this is transcript only", transcript_only)
 
     if summary:
-        # summary exist 
+    # Update only if new info exists, otherwise keep old summary
         summary_msg = (
-            f"This is a summary of the conversation to date: {summary}\n\n"
-            "Extend the summary by taking into account the new messages above."
+        f"Here is the current short summary: {summary}\n\n"
+        "Update it briefly to reflect ONLY new or changed information in above conversation transcript. "
+        "If there are no updates, simply return the original summary unchanged. "
+        "Keep it extremely concise and maintain all important info"
         )
     else:
-        summary_msg = "Create a summary of the conversation above."
+    # No previous summary — create a new concise one
+        summary_msg = "Create a very short, concise summary of the conversation above."
 
-    messages = state['messages'] + [HumanMessage(content=summary_msg)]
 
-    res = summary_model.invoke(messages)
+
+    # messages = [HumanMessage(content=transcript_only)] + [HumanMessage(content=summary_msg)]
+
+    combined_msg = f"Conversation transcript: {transcript_only}\n\n {summary_msg}"
+    messages = [
+    HumanMessage(content=combined_msg),
+    ]
+
+    print("this is msg", messages)
+
+    res = await summary_model.ainvoke(messages)
+
+    print("this is result", res)
 
     remaining_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-2]]
 
     return {"summary": res.content, "messages": remaining_messages}
+
+
+#=====================================formatter node==========================
+
+async def formatter_node(state: State) -> State:
+    """takes tool results from format final user-facing messages."""
+    # print("total messages -> ", state["messages"])
+    messages = state["messages"][-2]
+    question = state["question"]
+    summary = state.get("summary", "")
+
+    # print("result of formatter", messages)
+
+    chain = formatter_prompt | base_model
+    res = await chain.ainvoke({
+        "recent_context": messages,
+        "question": question,
+        "summary": summary
+    })
+    return {"messages": [res]}

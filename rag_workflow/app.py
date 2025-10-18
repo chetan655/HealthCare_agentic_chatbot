@@ -43,7 +43,7 @@ async def chat(chatschema: ChatSchema):
                 stream_mode='messages'
             ):
                 if isinstance(chunk, (AIMessage, AIMessageChunk)):
-                    if metadata['langgraph_node'] == 'general':
+                    if metadata['langgraph_node'] == 'general' or 'emergency' or 'formatter_node':
                         yield(chunk.content)
                 
     return StreamingResponse(fn(), media_type='text/plain')

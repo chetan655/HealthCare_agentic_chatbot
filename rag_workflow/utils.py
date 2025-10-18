@@ -26,8 +26,9 @@ def check_query_category(state: State):
 def check_query_category(state: State) -> str:
     """This function return node for the current category."""
     category = state['category']
-    # print("this is categoty -> ", category)
+    print("this is categoty -> ", type(category))
     if category == 'emergency':
+        # print("emem")
         return 'emergency_node'
     elif category == 'diagnostic':
         return 'diagnostic_node'

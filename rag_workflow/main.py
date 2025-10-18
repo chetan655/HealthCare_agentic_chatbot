@@ -11,7 +11,14 @@ from dotenv import load_dotenv
 
 from utils import  check_query_category
 from schema.schema import State
-from node.node import refiner, classifier, general_query_node, summarize_conv
+from node.node import (
+    refiner, 
+    classifier, 
+    general_query_node, 
+    summarize_conv,
+    emergency_query_node,
+    formatter_node
+)
 from models.models import tool_node, tools_condition
 
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -44,16 +51,24 @@ builder.add_node('refiner', refiner)
 builder.add_node('classifier', classifier)
 builder.add_node('general', general_query_node)
 builder.add_node('summarize_conv', summarize_conv)
+builder.add_node('emergency_node', emergency_query_node)
+builder.add_node('formatter_node', formatter_node)
 builder.add_node('tools', tool_node)
 
-builder.add_edge(START, 'summarize_conv')
-builder.add_edge('summarize_conv', 'classifier')
-# builder.add_edge('refiner', 'classifier')
+builder.set_entry_point("classifier")
 builder.add_conditional_edges('classifier', check_query_category)
-#  builder.add_edge('general_query_node', tools_condition)
-# builder.add_edge('tools', 'general_query_node')
+
 builder.add_conditional_edges('general', tools_condition)
-builder.add_edge('tools', 'general')
+builder.add_edge("general", "summarize_conv")
+
+builder.add_conditional_edges('emergency_node', tools_condition)
+builder.add_edge("emergency_node", "summarize_conv")
+
+
+
+builder.add_edge('tools', 'formatter_node')
+builder.add_edge('formatter_node', 'summarize_conv')
+builder.add_edge('summarize_conv', END)
 
 # graph = builder.compile()
 
