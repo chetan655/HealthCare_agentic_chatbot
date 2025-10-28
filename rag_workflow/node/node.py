@@ -150,11 +150,11 @@ async def summarize_conv(state: State) -> State:
     HumanMessage(content=combined_msg),
     ]
 
-    print("this is msg", messages)
+    # print("this is msg", messages
 
     res = await summary_model.ainvoke(messages)
 
-    print("this is result", res)
+    # print("this is result", res)
 
     remaining_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-2]]
 
