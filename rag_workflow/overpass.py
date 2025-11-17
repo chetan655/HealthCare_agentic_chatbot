@@ -1,70 +1,5 @@
-from langchain_core.tools import tool 
-from langchain_tavily import TavilySearch
-import os
-import math
 import requests
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-
-@tool
-def calculator(a: float, b: float, operation: str) -> float | str:
-    """
-    Perform arithmetic operations
-
-    Args: 
-        a: float
-        b: float
-        operation: str (e.g., '+', '-', '*', '/', 'add', 'subtract', 'multiply', 'divide')
-    """
-    print("Calculator activated")
-
-    # print("a", a)
-    # print("b", b)
-    # print("operation", operation)
-    
-    operation = operation.lower()  # normalize input
-    
-    if operation in ('+', 'add', 'addition'):
-        return a + b
-    elif operation in ('-', 'sub', 'subtract', 'subtraction'):
-        return a - b
-    elif operation in ('*', 'mul', 'multiply'):
-        return a * b
-    elif operation in ('/', 'div', 'divide', 'division'):
-        if b == 0:
-            return "Error: Division by zero!"
-        return a / b
-    else:
-        return f"Operation '{operation}' not supported."
-
-    
-
-#==================== web search tool ======================================
-# to do handle error
-
-
-tavily_search = TavilySearch(max_results=3)
-    
-
-@tool 
-def search(query: str) -> str:
-    """Takes a query and perform web search"""
-    res = tavily_search.invoke(query)
-
-    l = ""
-    for i in res['results']:
-        l = l + i['content']
-
-    l = l[:500]
-
-    # print("this is l", l)
-
-    return l
-
+import math
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
@@ -122,8 +57,8 @@ def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
 
         hospitals.append({
             "name": name,
-            # "latitude": h_lat,
-            # "longitude": h_lon,
+            "latitude": h_lat,
+            "longitude": h_lon,
             "distance_km": round(distance, 2)
         })
 
@@ -132,10 +67,22 @@ def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
 
     return hospitals
 
-@tool
-def find_nearby_hospitals(place_name):
-    """use this function to find nearby hospitals."""
-    print("loation", place_name)
+
+# 📍 Example: Kurukshetra Coordinates
+# 29.9451° N, 76.8173° E
+lat = 29.9451
+lon = 76.8173
+
+hospitals = find_nearby_hospitals_with_distance(lat, lon, radius=5000)
+
+print(f"Found {len(hospitals)} hospitals:\n")
+for h in hospitals:
+    print(f"{h['name']} - {h['distance_km']} km away - ({h['latitude']}, {h['longitude']})")
+
+
+import requests
+
+def geocode_location(place_name):
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": place_name,
@@ -148,16 +95,14 @@ def find_nearby_hospitals(place_name):
 
     if not data:
         return None
-    
-    latitude = float(data[0]["lat"])
-    longitude = float(data[0]["lon"])
-    display_name = data[0]["display_name"]
 
-    hospitals = find_nearby_hospitals_with_distance(lat=latitude, lon=longitude, radius=5000)
-    print("these are hos", hospitals)
-    return hospitals
+    return {
+        "latitude": float(data[0]["lat"]),
+        "longitude": float(data[0]["lon"]),
+        "display_name": data[0]["display_name"]
+    }
 
 
 # Example: convert location name
-# result = geocode_location("NIT Kurukshetra")
-# print(result)
+result = geocode_location("NIT Kurukshetra")
+print(result)

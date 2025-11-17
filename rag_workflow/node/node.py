@@ -4,7 +4,8 @@ from prompts.prompt import (
     classifier_prompt, 
     general_query_prompt,
     emergency_query_prompt,
-    formatter_prompt
+    formatter_prompt,
+    nearby_hospitals_prompt
 )
 from models.models import (
     refiner_model, classifier_model, 
@@ -51,7 +52,7 @@ async def classifier(state: State) -> State:
     try: 
         chain = classifier_prompt | classifier_model 
         res = await chain.ainvoke({'question': question})
-        print("response -> ", res)
+        print("category -> ", res)
         return {'category': res.category, 'messages': [question]}
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
@@ -87,6 +88,21 @@ async def general_query_node(state: State, config) -> State:
     except Exception as e:
         return {'error': f"Error refining query: {e}"}
     
+
+#==============================nearby hospitals node====================================
+
+async def nearby_hospital_finder_node(state: State, config) -> State:
+    """Finds the nearby hospitals."""
+    print("nearby hospital node activate")
+    question = state.get("question", "")
+    summary = state.get("summary", "")
+
+    try:
+        chain = nearby_hospitals_prompt | groq_llm_for_general_with_tools
+        res = await chain.ainvoke({"summary": summary, "question": question},config=config)
+        return {"messages": [res]}
+    except Exception as e:
+        return {'error': f"Error refining query: {e}"}
     
     
 #==============================emergency query node=====================================
@@ -123,6 +139,8 @@ async def summarize_conv(state: State) -> State:
 
     transcript_only = ""
 
+    # print("summary node activated")
+
     if len(messages) >=1 :
         for i in messages:
             transcript_only += i.content
@@ -142,7 +160,7 @@ async def summarize_conv(state: State) -> State:
         summary_msg = "Create a very short, concise summary of the conversation above."
 
 
-
+    # print(summary_msg)
     # messages = [HumanMessage(content=transcript_only)] + [HumanMessage(content=summary_msg)]
 
     combined_msg = f"Conversation transcript: {transcript_only}\n\n {summary_msg}"

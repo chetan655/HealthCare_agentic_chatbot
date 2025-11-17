@@ -18,4 +18,4 @@ class State(MessagesState):
 
 
 class ClassifierModelSchema(BaseModel):
-    category: Literal['general', 'emergency', 'diagnostic', 'medicine_info'] = Field(description="return category of the question.")
+    category: Literal['general', 'emergency', 'diagnostic', 'medicine_info', 'nearby_hospitals'] = Field(description="return category of the question.")

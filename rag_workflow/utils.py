@@ -34,6 +34,8 @@ def check_query_category(state: State) -> str:
         return 'diagnostic_node'
     elif category == 'medicine_info':
         return 'medicine_info'
+    elif category == 'nearby_hospitals':
+        return 'nearby_hospitals'
     else:
         return 'general'
     

@@ -28,7 +28,7 @@ MONGODB_URL = os.getenv('MONGODB_URL')
 async def home():
     return {"message": "api working"}
 
-@app.post("/chat")
+@app.post("/chat")  
 async def chat(chatschema: ChatSchema):
     question = chatschema.question
     thread_id = chatschema.thread_id
@@ -43,7 +43,7 @@ async def chat(chatschema: ChatSchema):
                 stream_mode='messages'
             ):
                 if isinstance(chunk, (AIMessage, AIMessageChunk)):
-                    if metadata['langgraph_node'] == 'general' or 'emergency' or 'formatter_node':
+                    if metadata['langgraph_node'] == 'general' or 'emergency' or 'formatter_node' or 'nearby_hospital_finder_node':
                         yield(chunk.content)
                 
     return StreamingResponse(fn(), media_type='text/plain')

@@ -44,14 +44,16 @@ classifier_prompt = ChatPromptTemplate.from_messages([
     ("system", 
      "You are a medical triage classifier. "
      "Classify the user’s question into exactly one of these categories:\n\n"
-     "1. general – routine, lifestyle, or preventive health questions. questions about medications, dosage, side effects, or interactions,  questions about symptoms or causes of a condition\n"
-     "2. emergency – urgent, life-threatening, or severe cases requiring immediate attention.\n"
-     "3. diagnostic – none .\n"
-     "4. medicine_info  none\n\n"
-     "Your output must be exactly one of: 'general', 'emergency', 'diagnostic', 'medicine_info'. "
+     "1. general – routine, lifestyle, or preventive health questions. questions about medications, dosage, side effects, or interactions, questions about symptoms or causes of a condition.\n"
+    
+     "3. diagnostic – none.\n"
+     "4. medicine_info – none.\n"
+     "5. nearby_hospitals – questions asking for nearby hospitals, nearest hospital, hospitals around a location, or emergency care locations.\n\n"
+     "Your output must be exactly one of: 'general', 'diagnostic', 'medicine_info', 'nearby_hospitals'. "
      "Do not explain, just output the category."),
     ("human", "{question}")
 ])
+
 # classifier_prompt = ChatPromptTemplate.from_messages([
 #     ("system", 
 #      "You are a medical triage classifier. "
@@ -96,13 +98,40 @@ general_query_prompt = ChatPromptTemplate.from_messages([
         "You have access to tools to get additional information if needed. "
         "Use the conversation summary below as context, but feel free to consult tools if necessary:\n{summary}\n\n"
         "Keep explanations simple and easy to understand. "
-        "Ask a short, relevant follow-up question if appropriate."
+        "Ask a short, relevant folklow-up question if appropriate."
     ),
     (
         "human",
         "here is the current question: {question}"
     )
 ])
+
+
+nearby_hospitals_prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "You are Acharya, a helpful medical assistant specialized in locating nearby hospitals. "
+        "The user is asking for nearby hospitals, nearest emergency centers, or hospitals around a specific location.\n\n"
+
+        "Your responsibilities:\n"
+        "1. Understand the user's location (explicit or implied).\n"
+        "2. If the user has not given any location or coordinates, ask once for clarification.\n"
+        "3. If the location is provided, call the appropriate tools\n"
+        "4. The tool may return many hospitals. **Always sort them by distance and return ONLY the nearest 5 hospitals.**\n"
+        "5. Present results in a clean, readable format.\n\n"
+
+        "Use the conversation summary below as context:\n{summary}\n\n"
+
+        "Keep your explanation simple and easy to understand. "
+        "If needed, ask the user for missing location information."
+    ),
+    (
+        "human",
+        "Here is the current question: {question}"
+    )
+])
+
+
 
 
 

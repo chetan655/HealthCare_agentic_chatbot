@@ -17,7 +17,8 @@ from node.node import (
     general_query_node, 
     summarize_conv,
     emergency_query_node,
-    formatter_node
+    formatter_node,
+    nearby_hospital_finder_node
 )
 from models.models import tool_node, tools_condition
 
@@ -53,6 +54,7 @@ builder.add_node('general', general_query_node)
 builder.add_node('summarize_conv', summarize_conv)
 builder.add_node('emergency_node', emergency_query_node)
 builder.add_node('formatter_node', formatter_node)
+builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
 builder.add_node('tools', tool_node)
 
 builder.set_entry_point("classifier")
@@ -63,6 +65,10 @@ builder.add_edge("general", "summarize_conv")
 
 builder.add_conditional_edges('emergency_node', tools_condition)
 builder.add_edge("emergency_node", "summarize_conv")
+
+builder.add_conditional_edges('nearby_hospitals', tools_condition)
+builder.add_edge("nearby_hospitals", "summarize_conv")
+# builder.add_conditional_edges('nearby_hospitals', tools_condition, {"tools": "tools", None: "summarize_conv"})
 
 
 
