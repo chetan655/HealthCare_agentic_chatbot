@@ -160,17 +160,24 @@ async def summarize_conv(state: State) -> State:
     transcript_only = " ".join(part for part in transcript_parts if part)
 
     if summary:
-    # Update only if new info exists, otherwise keep old summary
+    # Update only when new information exists; otherwise return the old summary unchanged
         summary_msg = (
-        f"Here is the current short summary: {summary}\n\n"
-        "Update it briefly to reflect ONLY new or changed information in above conversation transcript. "
-        "If there are no updates, simply return the original summary unchanged. "
-        "Keep it extremely concise and maintain all important info"
-        )
+        f"Existing summary: {summary}\n\n"
+        "Your task: Review the conversation above and determine whether it contains any "
+        "new, changed, or corrected information that should be reflected in the summary.\n\n"
+        "Rules:\n"
+        "1. ONLY update the summary if truly new or modified information appears.\n"
+        "2. If nothing new is present, RETURN THE EXISTING SUMMARY EXACTLY as-is.\n"
+        "3. Keep the summary extremely concise but DO NOT remove or lose any important details.\n"
+        "4. Preserve all essential facts, decisions, instructions, and outcomes.\n"
+        "5. Do NOT add speculation, interpretations, or details not present in the conversation."
+    )
     else:
     # No previous summary — create a new concise one
-        summary_msg = "Create a very short, concise summary of the conversation above."
-
+        summary_msg = (
+        "Create an extremely concise summary of the entire conversation above. "
+        "Include all essential information, decisions, facts, and outcomes, without adding anything extra."
+    )
 
     # print(summary_msg)
     # messages = [HumanMessage(content=transcript_only)] + [HumanMessage(content=summary_msg)]

@@ -47,7 +47,7 @@ async def chat(chatschema: ChatSchema):
                         "general",
                         "emergency",
                         "formatter_node",
-                        "nearby_hospital_finder_node"
+                        "nearby_hospitals"
                     ]:
                         yield(chunk.content)
                 
