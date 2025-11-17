@@ -137,15 +137,27 @@ async def summarize_conv(state: State) -> State:
     summary = state.get("summary", "")
     messages = state.get("messages", "")
 
-    transcript_only = ""
+    # transcript_only = ""
+    # if len(messages) >=1 :
+    #     for i in messages:
+    #         transcript_only += i.content
+
+    transcript_parts = []
 
     # print("summary node activated")
 
-    if len(messages) >=1 :
-        for i in messages:
-            transcript_only += i.content
+    if messages:
+        for m in messages:
+            # get raw content (handle plain values or objects with .content)
+            content = getattr(m, "content", m)
 
-    # print("this is transcript only", transcript_only)
+            # if content is a list, join elements; otherwise stringify
+            if isinstance(content, list):
+                transcript_parts.append(" ".join(str(c) for c in content))
+            else:
+                transcript_parts.append(str(content))
+
+    transcript_only = " ".join(part for part in transcript_parts if part)
 
     if summary:
     # Update only if new info exists, otherwise keep old summary
