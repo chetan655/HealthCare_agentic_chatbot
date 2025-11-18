@@ -4,7 +4,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_groq import ChatGroq
 
 
-from tools.tools import calculator, search, find_nearby_hospitals
+from tools.tools import calculator, search, find_nearby_hospitals, medicine_ocr_tool, medicine_database_lookup_tool
 from schema.schema import ClassifierModelSchema
 
 
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-tools = [calculator, search, find_nearby_hospitals]
+tools = [calculator, search, find_nearby_hospitals, medicine_database_lookup_tool]
 tool_node = ToolNode(tools)
 
 llm = HuggingFaceEndpoint(

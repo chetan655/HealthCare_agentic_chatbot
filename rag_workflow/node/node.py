@@ -5,7 +5,9 @@ from prompts.prompt import (
     general_query_prompt,
     emergency_query_prompt,
     formatter_prompt,
-    nearby_hospitals_prompt
+    nearby_hospitals_prompt,
+    image_ocr_prompt,
+    text_extract_prompt
 )
 from models.models import (
     refiner_model, classifier_model, 
@@ -49,9 +51,15 @@ async def classifier(state: State) -> State:
     """This function returns the category of the question."""
 
     question = state.get('question')
+    image = state.get("image", "")
+    # print("this is nnnnnnnnnnnnnnnnnnnnnnnnnnnnimg", image)
+    if image:
+        image_prompt = "there is image in request"
+    else:
+        image_prompt = "there is no image in request"
     try: 
         chain = classifier_prompt | classifier_model 
-        res = await chain.ainvoke({'question': question})
+        res = await chain.ainvoke({'question': question, "image_prompt": image_prompt})
         print("category -> ", res)
         return {'category': res.category, 'messages': [question]}
     except Exception as e:
@@ -216,3 +224,33 @@ async def formatter_node(state: State) -> State:
         "summary": summary
     })
     return {"messages": [res]}
+
+
+#==========================ocr node===============================
+
+async def ocr_node(state: State) -> State:
+    """takes image as input and gives json as output"""
+    summary = state.get("summary", "")
+    question = state.get("question", "")
+    image_bytes = state.get("image")
+
+    if image_bytes:
+        # Convert to PIL Image
+        from PIL import Image
+        import io
+
+        img = Image.open(io.BytesIO(image_bytes))
+        chain0 = text_extract_prompt | base_model
+        extracted_text = await chain0.ainvoke({"image": img})
+
+        # print("extracted text", extracted_text.content)
+
+    chain = image_ocr_prompt | groq_llm_for_general_with_tools
+    res = await chain.ainvoke({
+        "summary": summary,
+        "question": question or None,
+        "extracted_text": extracted_text
+    })
+    # print("this is res", res)
+    return {"messages": [res]}
+

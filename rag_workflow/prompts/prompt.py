@@ -37,22 +37,49 @@ refiner_prompt = ChatPromptTemplate.from_messages([
     HumanMessagePromptTemplate.from_template("Refine this question: {question}")
 ])
 
-
-
-
 classifier_prompt = ChatPromptTemplate.from_messages([
-    ("system", 
-     "You are a medical triage classifier. "
-     "Classify the user’s question into exactly one of these categories:\n\n"
-     "1. general – routine, lifestyle, or preventive health questions. questions about medications, dosage, side effects, or interactions, questions about symptoms or causes of a condition.\n"
-    
-     "3. diagnostic – none.\n"
-     "4. medicine_info – none.\n"
-     "5. nearby_hospitals – questions asking for nearby hospitals, nearest hospital, hospitals around a location, or emergency care locations.\n\n"
-     "Your output must be exactly one of: 'general', 'diagnostic', 'medicine_info', 'nearby_hospitals'. "
-     "Do not explain, just output the category."),
+    (
+        "system",
+        "You are a strict medical triage classifier.\n\n"
+        
+        "Your job: Classify the user's message into EXACTLY ONE of these categories:\n\n"
+        
+        "1. general – routine health, lifestyle, preventive health questions.\n"
+        "2. emergency – urgent medical situations like severe pain, heart attack symptoms, "
+        "   bleeding, poisoning, or anything requiring immediate medical attention.\n"
+        "3. diagnostic – user describes symptoms and wants to know the cause, or asks "
+        "   'what condition do I have?'.\n"
+        "4. nearby_hospitals – user asks for nearby hospitals, emergency centers, "
+        "   or hospitals around a specific location.\n"
+        "5. ocr – ONLY when the system message says: 'there is image in request'.\n\n"
+        
+        "IMPORTANT:\n"
+        "- If the system input contains 'there is image in request', ALWAYS return 'ocr'.\n"
+        "- Otherwise, classify normally ONLY based on the user question.\n"
+        "- Output ONLY ONE VALUE.\n"
+        "- Allowed outputs: 'general', 'emergency', 'diagnostic', 'ocr', 'nearby_hospitals'.\n"
+        "- Do NOT explain your reasoning."
+    ),
+    ("system", "{image_prompt}"),
     ("human", "{question}")
 ])
+
+
+
+
+# classifier_prompt = ChatPromptTemplate.from_messages([
+#     ("system", 
+#      "You are a medical triage classifier. "
+#      "Classify the user’s question into exactly one of these categories:\n\n"
+#      "1. general – routine, lifestyle, or preventive health questions. questions about medications, dosage, side effects, or interactions, questions about symptoms or causes of a condition.\n"
+    
+#      "3. diagnostic – none.\n"
+#      "4. medicine_info – none.\n"
+#      "5. nearby_hospitals – questions asking for nearby hospitals, nearest hospital, hospitals around a location, or emergency care locations.\n\n"
+#      "Your output must be exactly one of: 'general', 'diagnostic', 'medicine_info', 'nearby_hospitals'. "
+#      "Do not explain, just output the category."),
+#     ("human", "{question}")
+# ])
 
 # classifier_prompt = ChatPromptTemplate.from_messages([
 #     ("system", 
@@ -219,22 +246,70 @@ formatter_prompt = ChatPromptTemplate.from_messages([
     )
 ])
 
+# image_ocr_prompt = ChatPromptTemplate.from_messages([
+#     (
+#         "system",
+#         "You are a helpful medical assistant named Acharya.\n"
+#         "The user has just uploaded an image of a medicine label. They may have also asked a specific question about it.\n\n"
+#         "**Your primary goal is to analyze this image to provide comprehensive information.**\n\n"
+#         "**YOUR PROCESS MUST BE:**\n"
+#         "1.  **DO NOT** try to read the text from the image yourself. You **must** immediately use the `medicine_ocr_tool` to extract the details. This tool will return a JSON object.\n"
+#         "2.  **After** you get the JSON data, use this information to look up its uses, side effects, and other details using your `medicine_database_lookup_tool`.\n"
+#         "3.  **Finally,** synthesize all the information you've gathered (from the OCR and the database lookup) into a single, helpful, natural language response for the user.\n"
+#         "4.  If the user asked a specific question (like '{question}'), answer it directly using the information you've found. If they just uploaded the image without a question, provide a summary of the medicine's details.\n\n"
+#         "Here is the conversation summary for context:\n{summary}\n"
+#     ),
+#     (
+#         "human",
+#         "{question}\n\n"
+#         "[The user has also uploaded an image, which you must process using your tools as instructed in the system prompt.]"
+#     )
+# ])
+
 image_ocr_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
         "You are a helpful medical assistant named Acharya.\n"
-        "The user has just uploaded an image of a medicine label. They may have also asked a specific question about it.\n\n"
-        "**Your primary goal is to analyze this image to provide comprehensive information.**\n\n"
-        "**YOUR PROCESS MUST BE:**\n"
-        "1.  **DO NOT** try to read the text from the image yourself. You **must** immediately use the `medicine_ocr_tool` to extract the details. This tool will return a JSON object.\n"
-        "2.  **After** you get the JSON data, use this information to look up its uses, side effects, and other details using your `medicine_database_lookup_tool`.\n"
-        "3.  **Finally,** synthesize all the information you've gathered (from the OCR and the database lookup) into a single, helpful, natural language response for the user.\n"
-        "4.  If the user asked a specific question (like '{question}'), answer it directly using the information you've found. If they just uploaded the image without a question, provide a summary of the medicine's details.\n\n"
+        "You will receive three things:\n"
+        "1. The user's current question (may be empty or optional).\n"
+        "2. The summary of the previous conversation.\n"
+        "3. The extracted text from the uploaded medicine image.\n\n"
+
+        "**YOUR TASK:**\n"
+        "1. Use ONLY the extracted text provided to you. DO NOT attempt to read or interpret any image yourself.\n"
+        "2. Use the `medicine_database_lookup_tool` to look up the medicine details using the extracted text.\n"
+        "   - The tool may return uses, side effects, or 'no data found'.\n"
+        "3. After receiving the lookup results, generate a single clear, helpful, natural-language response.\n"
+        "4. If the user asked a specific question (like '{question}'), answer it directly using the lookup results.\n"
+        "5. If the user did not ask a specific question, provide a concise summary of the medicine based on the lookup data.\n\n"
+        
         "Here is the conversation summary for context:\n{summary}\n"
     ),
     (
         "human",
-        "{question}\n\n"
-        "[The user has also uploaded an image, which you must process using your tools as instructed in the system prompt.]"
+        "User question (optional): {question}\n\n"
+        "Extracted text from image:\n{extracted_text}"
+    )
+])
+
+
+
+text_extract_prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "You are a medical OCR extraction assistant named Acharya. "
+        "You will receive ONLY an image of a medicine label. "
+        "Your job is to analyze the image and extract key information clearly.\n\n"
+        "Return the result strictly as a clean JSON object with the following keys:\n"
+        '- \"medicine_name\"\n'
+        '- \"manufacturer\"\n'
+        '- \"active_salts\" (as a list of strings)\n'
+        '- \"expiry_date\" (in DD-MM-YYYY format if possible, otherwise MM-YYYY)\n\n'
+        "Do not include any explanations or markdown like ```json. "
+        "If a piece of information is missing, set its value to null."
+    ),
+    (
+        "human",
+        "Here is the medicine image: {image}"
     )
 ])
