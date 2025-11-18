@@ -26,10 +26,10 @@ except FileNotFoundError:
     MEDICINE_NAMES_LIST = []
     COMPOSITION_LIST = []
 
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise ValueError("GOOGLE_API_KEY not found in .env file.")
-genai.configure(api_key=api_key)
+# api_key = os.getenv("GOOGLE_API_KEY")
+# if not api_key:
+#     raise ValueError("GOOGLE_API_KEY not found in .env file.")
+# genai.configure(api_key=api_key)
 
 
 #==========================================================================================
@@ -273,6 +273,7 @@ def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
 @tool
 def find_nearby_hospitals(place_name):
     """use this function to find nearby hospitals."""
+    print("nearby tool activatedssssssssssssssss")
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": place_name,

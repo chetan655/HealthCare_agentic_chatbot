@@ -15,7 +15,8 @@ class State(MessagesState):
     # messages: Annotated[list[dict[str, str]], add_messages]
     last_messages: list[str]  # later to change to BaseMessge
     category: str
+    image: Optional[bytes]
 
 
 class ClassifierModelSchema(BaseModel):
-    category: Literal['general', 'emergency', 'diagnostic', 'medicine_info', 'nearby_hospitals'] = Field(description="return category of the question.")
+    category: Literal['general', 'emergency', 'diagnostic', 'ocr', 'nearby_hospitals'] = Field(description="return category of the question.")
