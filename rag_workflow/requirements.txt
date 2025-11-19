@@ -42,7 +42,7 @@ anyio==4.3.0
 # -----------------------
 # LangChain Ecosystem (Compatible Set)
 # -----------------------
-langchain==0.2.14
+langchain==0.2.28
 langchain-core==0.2.28
 langchain-google-genai==1.0.3
 langchain-groq==0.1.3
