@@ -396,7 +396,7 @@ from pydantic import BaseModel
 import anyio
 
 from main import AIMessage, AIMessageChunk, builder
-from langgraph.checkpoint.mongodb import AsyncMongoDBSaver
+from langgraph.checkpoint.mongodb import MongoDBSaver  # Use MongoDBSaver instead
 
 from pinecone import Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -502,22 +502,25 @@ async def chat(
             # Worker thread for processing
             async def worker():
                 try:
-                    async with AsyncMongoDBSaver.from_conn_string(MONGODB_URL) as saver:
-                        graph = builder.compile(checkpointer=saver)
+                    if image_path and image_path.exists():  # Check if the file exists
+                        with MongoDBSaver.from_conn_string(MONGODB_URL) as saver:
+                            graph = builder.compile(checkpointer=saver)
 
-                        async for chunk, metadata in graph.astream(
-                            {"question": question, "image": image_path},
-                            config=config,
-                            stream_mode="messages",
-                        ):
-                            await send_stream.send((chunk, metadata))
+                            async for chunk, metadata in graph.astream(
+                                {"question": question, "image": str(image_path)},  # Pass the image path as a string
+                                config=config,
+                                stream_mode="messages",
+                            ):
+                                await send_stream.send((chunk, metadata))
 
-                        # Stream finished
-                        await send_stream.send(("__END__", None))
+                            # Stream finished
+                            await send_stream.send(("__END__", None))
+                    else:
+                        await send_stream.send(("__ERROR__", "Image file not found."))  # Send error if file not found
 
                 except Exception as e:
                     print("Worker error:", e)
-                    await send_stream.send(("__ERROR__", str(e)))
+                    await send_stream.send(("__ERROR__", str(e)))  # Await the send
 
             tg.start_soon(worker)
 
@@ -574,4 +577,3 @@ async def chat(
     background = BackgroundTask(_cleanup_file, image_path) if image_path else None
 
     return StreamingResponse(fn(), media_type="text/plain", background=background)
-
