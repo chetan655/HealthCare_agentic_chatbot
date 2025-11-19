@@ -13,8 +13,16 @@ from models.models import (
     refiner_model, classifier_model, 
     base_model, base_model_with_tools, 
     groq_llm_for_general_with_tools,
-    summary_model
+    summary_model,
+    groq_llm
 )
+
+import google.generativeai as genai
+import os
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+genai.configure(api_key=GOOGLE_API_KEY)
 # from utils import sanitize_ai_message
 
 from langchain_core.output_parsers import StrOutputParser
@@ -24,7 +32,23 @@ from langchain_core.messages.utils import (
 )
 from langchain_core.messages import RemoveMessage, HumanMessage, SystemMessage
 
+from utils import retriever
+
 parser = StrOutputParser()
+
+#======================memory_retriever_node==================
+async def memory_retriever_node(state: State) -> State:
+    """This function fetches past relevent documents."""
+    question = state.get("question", "")
+
+    rel_docs = retriever.invoke(question)
+
+    # print("this is relevent docs", rel_docs)
+
+    state['memory_docs'] = rel_docs
+
+
+    return state
 
 
 #===========================refiner======================================
@@ -76,6 +100,7 @@ async def general_query_node(state: State, config) -> State:
     print("general node activated.")
     question = state.get('question', "")
     summary = state.get("summary", "")
+    retrieved_docs = state.get("memory_docs", "")
     # print("question to general: ", question)
     # messages = trim_messages(
     #     state['messages'],
@@ -86,7 +111,7 @@ async def general_query_node(state: State, config) -> State:
     # print("this is msgt -> ", messages)
     try:
         chain = general_query_prompt | groq_llm_for_general_with_tools 
-        res = await chain.ainvoke({"summary": summary, 'question': question}, config=config)
+        res = await chain.ainvoke({"summary": summary, 'question': question, "retrieved_docs": retrieved_docs}, config=config)
         """we only provide config to async model invoke if if python version < 3.11. this enable streaming"""
         # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
         # print("output of res -> ", res)
@@ -232,18 +257,40 @@ async def ocr_node(state: State) -> State:
     """takes image as input and gives json as output"""
     summary = state.get("summary", "")
     question = state.get("question", "")
-    image_bytes = state.get("image")
+    import PIL
+    # image_bytes = state.get("image")
+    image_path = state.get("image", "")
 
-    if image_bytes:
-        # Convert to PIL Image
-        from PIL import Image
-        import io
+    image = PIL.Image.open(image_path)
 
-        img = Image.open(io.BytesIO(image_bytes))
-        chain0 = text_extract_prompt | base_model
-        extracted_text = await chain0.ainvoke({"image": img})
+    prompt = """
+            Analyze the image of this medicine label. Extract the following information and return it as a clean JSON object.
+            Do not include any introductory text or markdown formatting like ```json.
+            
+            The keys in the JSON should be:
+            - "medicine_name"
+            - "manufacturer"
+            - "active_salts" (as a list of strings)
+            - "expiry_date" (in DD-MM-YYYY format if possible, otherwise MM-YYYY)
+            
+            If a piece of information is not available, set its value to null.
+        """
+    
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    response = model.generate_content([image, prompt])
+    extracted_text = response.text.strip().replace("```json", "").replace("```", "")
 
-        # print("extracted text", extracted_text.content)
+    # if image_bytes:
+    #     # Convert to PIL Image
+    #     from PIL import Image
+    #     import io
+
+    #     img = Image.open(io.BytesIO(image_bytes))
+    #     chain0 = text_extract_prompt | base_model
+    #     extracted_text = await chain0.ainvoke({"image": img})
+
+    #     print("extracted text", extracted_text.content)
 
     chain = image_ocr_prompt | groq_llm_for_general_with_tools
     res = await chain.ainvoke({

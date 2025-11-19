@@ -18,3 +18,12 @@ pydantic
 python-dotenv
 
 aiohttp
+
+langchain-pinecone
+google-generativeai
+
+fuzzywuzzy
+python-Levenshtein
+
+Pillow
+pandas
