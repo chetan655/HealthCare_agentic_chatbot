@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 
 from langgraph.graph import StateGraph, START, END 
 from langgraph.graph.message import add_messages
-from langgraph.checkpoint.mongodb import MongoDBSaver, AsyncMongoDBSaver
+from langgraph.checkpoint.mongodb import MongoDBSaver
 
 from dotenv import load_dotenv
 
