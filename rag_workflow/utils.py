@@ -1,36 +1,44 @@
-# from motor.motor_asyncio import AsyncIOMotorClient
+# Full rewritten file with correct Pinecone serverless + Gemini embeddings + compressed retriever
+
 import os
-# from functools import lru_cache
+import time
+import uuid
 
 from schema.schema import State
 from langgraph.graph import END
 
-from langchain_core.messages import ToolMessage
+# LangChain + Gemini
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+# from langchain_community.vectorstores import Pinecone as PineconeVectorStore
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import LLMChainExtractor
 
+# Pinecone serverless client
+from pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
+
+from langchain_core.messages import ToolMessage
 from models.models import tools
 from tools.tools import calculator
 
-# @lru_cache(maxsize=1)
-# def get_mongo_connection(MONGODB_URL: str, MONGODB_NAME: str, MONGODB_COLLECTION_NAME: str):
-#     client = AsyncIOMotorClient(MONGODB_URL)
-#     db = client[MONGODB_NAME]
-#     return db[MONGODB_COLLECTION_NAME]
+# -------------------------
+# ENV VARS
+# -------------------------
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "memory-index")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-def check_query_category(state: State):
-    category = state['category'] 
-    if category == 'general':
-        return 'general_query_node'
-    else:
-        END
+# Example: you should replace this with real user ID in your app
+user_id = "12345"
 
+# -------------------------
+# CATEGORY ROUTING
+# -------------------------
 def check_query_category(state: State) -> str:
-    """This function return node for the current category."""
-    category = state['category']
-    # print("this is categoty -> ", type(category))
-    # if 'image' in state:
-    #     return 'ocr'
+    """Return next node based on category in state."""
+    category = state.get("category", "")
+
     if category == 'emergency':
-        # print("emem")
         return 'emergency_node'
     elif category == 'diagnostic':
         return 'diagnostic_node'
@@ -42,49 +50,83 @@ def check_query_category(state: State) -> str:
         return 'ocr'
     else:
         return 'general'
-    
-# def tool_condition(state):
-#     # print("state ->", state)
-#     message = state['messages'][-1]
-#     print("messages -> ", message)
 
-#     # print("this is additional_kwargs -> ", message['additional_kwargs'])
+# -------------------------
+# EMBEDDINGS (Gemini 004)
+# -------------------------
+gem_embeddings = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+    google_api_key=GOOGLE_API_KEY
+)
 
-#     # print("this is tool call", message.tool_calls)
+# -------------------------
+# PINECONE SERVERLESS INIT
+# -------------------------
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
-#     if hasattr(message, 'tool_calls') and message.tool_calls:
-#         for call in message.tool_calls:
-#             tool_name = call['name']
-#             tool_args = call['args']
-#             tool_call_id = call['id']
+# Create serverless index if missing
+existing_indexes = [idx["name"] for idx in pc.list_indexes()]
 
-#         print("message -> ", message)
-#         print("tool_name -> ", tool_name)
-#         print("tool_args -> ", tool_args)
+if PINECONE_INDEX not in existing_indexes:
+    pc.create_index(
+        name=PINECONE_INDEX,
+        dimension=768,
+        metric="cosine",
+        spec={
+            "serverless": {
+                "cloud": "aws",
+                "region": "us-east-1"
+            }
+        }
+    )
 
-#         if tool_name == 'calculator':
+# Connect to the index
+index = pc.Index(PINECONE_INDEX)
 
-#             res = calculator.invoke(tool_args)
+# -------------------------
+# VECTOR STORE
+# -------------------------
+pinecone_vs = PineconeVectorStore(
+    index=index,
+    embedding=gem_embeddings,
+    text_key="page_content"
+)
 
-#             tool_msg = ToolMessage(content=res, tool_name=tool_name, tool_call_id=tool_call_id)
-#             print("tool_mst -> ", tool_msg)
+# -------------------------
+# COMPRESSOR LLM
+# -------------------------
+compressor_llm = ChatGoogleGenerativeAI(
+    model="gemini-2.0-flash",
+    google_api_key=GOOGLE_API_KEY
+)
 
-#             state['message'] = [tool_msg]
-#             return 'general'
-#     else:
-#         return END
+compressor = LLMChainExtractor.from_llm(compressor_llm)
 
+# -------------------------
+# GLOBAL COMPRESSED RETRIEVER
+# -------------------------
+# def get_global_compressed_retriever(k: int = 3):
+#     try:
+#         base = pinecone_vs.as_retriever(
+#             search_type="similarity",
+#             search_kwargs={
+#                 "k": k,
+#                 "filter": {"user_id": user_id}  # Retrieve only this user's memory
+#             }
+#         )
 
-# from langchain_core.messages import AIMessage
+#         return ContextualCompressionRetriever(
+#             base_retriever=base,
+#             base_compressor=compressor
+#         )
+#     except Exception as e:
+#         print(f"Error in get_global_compressed_retriever: {e}")
+#         return None  # or handle it as needed
 
-# def sanitize_ai_message(ai_msg: AIMessage, keep_tool_calls=True) -> AIMessage:
-#     """Remove unnecessary metadata from AIMessage to save tokens."""
-#     # new_kwargs = {}
-#     # print("this is ai msg -=> ", ai_msg.tool_calls)
-#     # if keep_tool_calls and 'tool_calls' in ai_msg.tool_calls:
-#     #     new_kwargs['tool_calls'] = ai_msg.tool_calls[]
+# # Create retriever instance
+# retriever = get_global_compressed_retriever()
 
-#     return AIMessage(
-#         content=ai_msg.content,
-#         tool_calls=ai_msg.tool_calls
-#     )
+retriever = pinecone_vs.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k": 3}
+)

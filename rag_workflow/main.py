@@ -19,7 +19,8 @@ from node.node import (
     emergency_query_node,
     formatter_node,
     nearby_hospital_finder_node,
-    ocr_node
+    ocr_node,
+    memory_retriever_node
 )
 from models.models import tool_node, tools_condition
 
@@ -57,9 +58,11 @@ builder.add_node('emergency_node', emergency_query_node)
 builder.add_node('formatter_node', formatter_node)
 builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
 builder.add_node('ocr', ocr_node)
+builder.add_node('memory_retriever_node', memory_retriever_node)
 builder.add_node('tools', tool_node)
 
-builder.set_entry_point("classifier")
+builder.set_entry_point("memory_retriever_node")
+builder.add_edge('memory_retriever_node', 'classifier')
 builder.add_conditional_edges('classifier', check_query_category)
 
 builder.add_conditional_edges('general', tools_condition)

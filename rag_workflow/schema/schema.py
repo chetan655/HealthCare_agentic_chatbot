@@ -1,7 +1,8 @@
-from typing import Annotated, Optional, TypedDict, Literal
+from typing import Annotated, Optional, TypedDict, Literal, List
 from pydantic import BaseModel, Field
 
 from langgraph.graph.message import add_messages
+from langchain_core.documents import Document
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph import MessagesState
@@ -16,6 +17,7 @@ class State(MessagesState):
     last_messages: list[str]  # later to change to BaseMessge
     category: str
     image: Optional[bytes]
+    memory_docs = List[Document]
 
 
 class ClassifierModelSchema(BaseModel):

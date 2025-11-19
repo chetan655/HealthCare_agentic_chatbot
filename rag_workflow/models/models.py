@@ -61,4 +61,8 @@ base_model_with_tools = base_model.bind_tools(tools)
 # )
 # refiner_model = 
 
-classifier_model = base_model.with_structured_output(ClassifierModelSchema)
+# base_model1 = ChatGoogleGenerativeAI(
+#     model='gemini-2.-flash-lite'
+# )
+
+classifier_model = groq_llm.with_structured_output(ClassifierModelSchema)
