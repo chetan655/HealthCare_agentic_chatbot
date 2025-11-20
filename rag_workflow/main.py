@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 
 from langgraph.graph import StateGraph, START, END 
 from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.mongodb import MongoDBSaver
 
 from dotenv import load_dotenv
@@ -22,7 +23,7 @@ from node.node import (
     ocr_node,
     memory_retriever_node
 )
-from models.models import tool_node, tools_condition
+from models.models import tool_node, tools_condition, tools
 
 from langchain_core.messages import AIMessage, AIMessageChunk
 
@@ -43,13 +44,9 @@ MONGODB_URL = os.getenv('MONGODB_URL')
 
 
     
-
-
-
-
-#------------------graph------------------
 builder = StateGraph(State)
 
+# 1. Add Nodes
 builder.add_node('refiner', refiner)
 builder.add_node('classifier', classifier)
 builder.add_node('general', general_query_node)
@@ -59,29 +56,109 @@ builder.add_node('formatter_node', formatter_node)
 builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
 builder.add_node('ocr', ocr_node)
 builder.add_node('memory_retriever_node', memory_retriever_node)
-builder.add_node('tools', tool_node)
 
+# Tool Node (Prebuilt in new LangGraph)
+builder.add_node('tools', ToolNode(tools)) 
+
+# 2. Entry Point
 builder.set_entry_point("memory_retriever_node")
+
+# 3. Standard Edges
 builder.add_edge('memory_retriever_node', 'classifier')
-builder.add_conditional_edges('classifier', check_query_category)
-
-builder.add_conditional_edges('general', tools_condition)
-builder.add_edge("general", "summarize_conv")
-
-builder.add_conditional_edges('emergency_node', tools_condition)
-builder.add_edge("emergency_node", "summarize_conv")
-
-builder.add_conditional_edges('nearby_hospitals', tools_condition)
-builder.add_edge("nearby_hospitals", "summarize_conv")
-# builder.add_conditional_edges('nearby_hospitals', tools_condition, {"tools": "tools", None: "summarize_conv"})
-
-builder.add_conditional_edges('ocr', tools_condition)
-# builder.add_edge("ocr", "summarize_conv")
-
-
 builder.add_edge('tools', 'formatter_node')
 builder.add_edge('formatter_node', 'summarize_conv')
 builder.add_edge('summarize_conv', END)
+
+# 4. Conditional Edge: CLASSIFIER (Critical Fix)
+# The classifier determines which specialized node to go to next.
+# Ensure 'check_query_category' returns the exact string keys used in the dict below.
+builder.add_conditional_edges(
+    'classifier',
+    check_query_category,
+    {
+        "general": "general",
+        "emergency_node": "emergency_node",
+        "nearby_hospitals": "nearby_hospitals",
+        "ocr": "ocr"
+    }
+)
+
+# 5. Conditional Edges: TOOLS
+# If the model calls a tool -> Go to 'tools' node
+# If the model does NOT call a tool -> Go to 'summarize_conv'
+routing_logic = {"tools": "tools", END: "summarize_conv"}
+
+builder.add_conditional_edges('general', tools_condition, routing_logic)
+builder.add_conditional_edges('emergency_node', tools_condition, routing_logic)
+builder.add_conditional_edges('nearby_hospitals', tools_condition, routing_logic)
+builder.add_conditional_edges('ocr', tools_condition, routing_logic)
+
+
+
+
+# #------------------graph------------------
+# builder = StateGraph(State)
+
+# builder.add_node('refiner', refiner)
+# builder.add_node('classifier', classifier)
+# builder.add_node('general', general_query_node)
+# builder.add_node('summarize_conv', summarize_conv)
+# builder.add_node('emergency_node', emergency_query_node)
+# builder.add_node('formatter_node', formatter_node)
+# builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
+# builder.add_node('ocr', ocr_node)
+# builder.add_node('memory_retriever_node', memory_retriever_node)
+# builder.add_node('tools', tool_node)
+
+# builder.set_entry_point("memory_retriever_node")
+# builder.add_edge('memory_retriever_node', 'classifier')
+
+# builder.add_conditional_edges('classifier', check_query_category)
+
+# builder.add_conditional_edges(
+#     'general',
+#     tools_condition,
+#     {"tools": "tools", END: "summarize_conv"}
+# )
+
+# builder.add_conditional_edges(
+#     'emergency_node',
+#     tools_condition,
+#     {"tools": "tools", END: "summarize_conv"}
+# )
+
+# builder.add_conditional_edges(
+#     'nearby_hospitals',
+#     tools_condition,
+#     {"tools": "tools", END: "summarize_conv"}
+# )
+
+# builder.add_conditional_edges(
+#     'ocr',
+#     tools_condition,
+#     {"tools": "tools", END: "summarize_conv"}
+# )
+
+
+# # builder.add_conditional_edges('classifier', check_query_category)
+
+# # builder.add_conditional_edges('general', tools_condition)
+# # builder.add_edge("general", "summarize_conv")
+
+# # builder.add_conditional_edges('emergency_node', tools_condition)
+# # builder.add_edge("emergency_node", "summarize_conv")
+
+# # builder.add_conditional_edges('nearby_hospitals', tools_condition)
+# # builder.add_edge("nearby_hospitals", "summarize_conv")
+# # builder.add_conditional_edges('nearby_hospitals', tools_condition, {"tools": "tools", None: "summarize_conv"})
+
+# # builder.add_conditional_edges('ocr', tools_condition)
+# # builder.add_edge("ocr", "summarize_conv")
+
+
+# builder.add_edge('tools', 'formatter_node')
+# builder.add_edge('formatter_node', 'summarize_conv')
+# builder.add_edge('summarize_conv', END)
 
 # graph = builder.compile()
 

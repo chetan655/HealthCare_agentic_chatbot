@@ -195,6 +195,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     Returns distance in kilometers.
     """
     # ensure numeric inputs
+    # print("lat", lat)
     try:
         lat1, lon1, lat2, lon2 = map(float, (lat1, lon1, lat2, lon2))
     except (TypeError, ValueError):
@@ -214,13 +215,22 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
     return R * c
 # ...existing code...
-def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
+
+def find_nearby_hospitals_with_distance(lat, long, radius=5000):
+    """use this to find nearby hospitals"""
+    # print("find nealrnias;fjsif")
+    try:
+        lat = float(lat)
+        long = float(long)
+    except (ValueError, TypeError):
+        print(f"Invalid coordinates provided: {lat}, {long}")
+        return []
     query = f"""
     [out:json];
     (
-      node["amenity"="hospital"](around:{radius},{lat},{lon});
-      way["amenity"="hospital"](around:{radius},{lat},{lon});
-      relation["amenity"="hospital"](around:{radius},{lat},{lon});
+      node["amenity"="hospital"](around:{radius},{lat},{long});
+      way["amenity"="hospital"](around:{radius},{lat},{long});
+      relation["amenity"="hospital"](around:{radius},{lat},{long});
     );
     out center;
     """
@@ -259,7 +269,7 @@ def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
             continue
 
         # Calculate distance
-        distance = haversine_distance(lat, lon, h_lat, h_lon)
+        distance = haversine_distance(lat, long, h_lat, h_lon)
 
         hospitals.append({
             "name": name,
@@ -269,38 +279,185 @@ def find_nearby_hospitals_with_distance(lat, lon, radius=5000):
     # Sort by nearest first
     hospitals.sort(key=lambda x: x["distance_km"])
     return hospitals
-# ...existing code...
+# # ...existing code...
 @tool
-def find_nearby_hospitals(place_name):
-    """use this function to find nearby hospitals."""
-    print("nearby tool activatedssssssssssssssss")
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {
-        "q": place_name,
-        "format": "json",
-        "limit": 1
-    }
+def find_nearby_hospitals(lat: str, long: str):
+    """use this function to find nearby hospitals.
+    it will receive lat: latitude as string and long: longitude as string"""
+    # if preference == 'place_name':
+    #     print("nearby tool activatedssssssssssssssss")
+    #     url = "https://nominatim.openstreetmap.org/search"
+    #     params = {
+    #         "q": place_name,
+    #         "format": "json",
+    #         "limit": 1
+    #     }
 
-    try:
-        response = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-    except Exception:
-        return []
+    #     try:
+    #         response = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+    #         response.raise_for_status()
+    #         data = response.json()
+    #     except Exception:
+    #         return []
 
-    if not data:
-        return []
+    #     if not data:
+    #         return []
 
-    try:
-        latitude = float(data[0]["lat"])
-        longitude = float(data[0]["lon"])
-    except (KeyError, TypeError, ValueError):
-        return []
+    #     try:
+    #         latitude = float(data[0]["lat"])
+    #         longitude = float(data[0]["lon"])
+    #     except (KeyError, TypeError, ValueError):
+    #         return []
 
-    hospitals = find_nearby_hospitals_with_distance(lat=latitude, lon=longitude, radius=5000)
+    hospitals = find_nearby_hospitals_with_distance(lat=lat, long=long, radius=5000)
+    # print("nearby hos", hospitals)
     return hospitals
-# ...existing code...
+# # ...existing code...
 
+# import requests
+# from langchain_core.tools import tool
+
+# # Assuming this function exists in your codebase
+# # from your_module import find_nearby_hospitals_with_distance
+
+# # @tool
+# # def find_nearby_hospitals(lat: str = "", long: str = "", place_name: str = "", preference: str = ""):
+# #     """
+# #     Use this function to find nearby hospitals.
+    
+# #     Args:
+# #         lat (str): Latitude (required if preference is 'coordinates').
+# #         long (str): Longitude (required if preference is 'coordinates').
+# #         place_name (str): Name of the city/area (required if preference is 'place_name').
+# #         preference (str): The selection logic ('place_name', 'coordinates', 'summary', 'ask_user').
+# #     """
+
+# #     print("this is lat", lat)
+# #     print("this is long", long)
+# #     print("this is place", place_name)
+# #     print("this is preference", preference)
+# #     # 1. Handle "ask_user" or missing data immediately
+# #     if preference == "ask_user":
+# #         return "Please provide a specific location name or your GPS coordinates."
+
+# #     target_lat = None
+# #     target_lon = None
+
+# #     # 2. Logic Branch A: User provided a Location Name (Highest Priority)
+# #     # or 'summary' was chosen but it relies on a place name.
+# #     if preference == "place_name":
+# #         if not place_name:
+# #             return "Error: Preference was set to place_name, but no name was provided."
+            
+# #         # Geocoding logic (converting name to coordinates)
+# #         url = "https://nominatim.openstreetmap.org/search"
+# #         params = {
+# #             "q": place_name,
+# #             "format": "json",
+# #             "limit": 1
+# #         }
+
+# #         try:
+# #             # User-Agent is required by Nominatim Policy
+# #             headers = {"User-Agent": "Medical_Assistant_Bot/1.0"} 
+# #             response = requests.get(url, params=params, headers=headers, timeout=10)
+# #             response.raise_for_status()
+# #             data = response.json()
+            
+# #             if not data:
+# #                 return f"Could not find coordinates for the location: {place_name}"
+                
+# #             target_lat = float(data[0]["lat"])
+# #             target_lon = float(data[0]["lon"])
+            
+# #         except Exception as e:
+# #             return f"Error resolving location name: {str(e)}"
+
+# #     # 3. Logic Branch B: User provided Coordinates
+# #     # or 'summary' was chosen but it relies on coordinates.
+# #     elif preference == "coordinates":
+# #         print("this is numming")
+# #         try:
+# #             target_lat = float(lat)
+# #             target_lon = float(long)
+# #         except ValueError:
+# #             return "Invalid coordinates format provided."
+        
+# #     print("latlslf", target_lat)
+# #     print("latlslf", target_lon)
+
+# #     # 4. Final execution
+# #     if target_lat is not None and target_lon is not None:
+# #         print("sjflsjf")
+# #         # Call your internal calculation function
+# #         # Ensure find_nearby_hospitals_with_distance accepts floats or strings as per its definition
+# #         print(find_nearby_hospitals_with_distance(lat=target_lat, long=target_lon, radius=5000))
+# #         res = find_nearby_hospitals_with_distance(lat=target_lat, long=target_lon, radius=5000)
+# #         return res
+        
+    
+# #     return "Unable to determine location for hospital search."
+
+
+# @tool
+# def find_nearby_hospitals(lat: str = "", long: str = "", place_name: str = "", preference: str = ""):
+#     """
+#     Finds nearby hospitals.
+#     Args:
+#         lat: Latitude string.
+#         long: Longitude string.
+#         place_name: City/Area name.
+#         preference: 'place_name' or 'coordinates' or 'ask_user'.
+#     """
+#     print(f"DEBUG: Tool Called. Pref: {preference}, Place: {place_name}, Lat: {lat}, Long: {long}")
+
+#     if preference == "ask_user":
+#         return "Please provide a specific location name or allow GPS access."
+
+#     target_lat = None
+#     target_lon = None
+
+#     # --- PATH A: Location Name (Prioritized) ---
+#     if preference == "place_name":
+#         if not place_name:
+#             return "Error: logic selected place_name but none provided."
+            
+#         url = "https://nominatim.openstreetmap.org/search"
+#         # OpenStreetMap requires a User-Agent
+#         headers = {"User-Agent": "Medical_Assistant_Bot/1.0"} 
+        
+#         try:
+#             resp = requests.get(url, params={"q": place_name, "format": "json", "limit": 1}, headers=headers, timeout=5)
+#             resp.raise_for_status()
+#             data = resp.json()
+            
+#             if not data:
+#                 return f"Could not find coordinates for '{place_name}'."
+                
+#             target_lat = float(data[0]["lat"])
+#             target_lon = float(data[0]["lon"])
+#         except Exception as e:
+#             return f"Geocoding error: {e}"
+
+#     # --- PATH B: Coordinates (Fallback) ---
+#     elif preference == "coordinates":
+#         # Verify we actually have valid numbers, filtering out "None" strings
+#         if not lat or not long or lat == "None" or long == "None":
+#             return "Error: Coordinate preference selected but invalid coordinates provided."
+            
+#         try:
+#             target_lat = float(lat)
+#             target_lon = float(long)
+#         except ValueError:
+#             return "Invalid coordinate format."
+
+#     # --- FINAL EXECUTION ---
+#     if target_lat is not None and target_lon is not None:
+#         # Call your existing calculation function
+#         res = find_nearby_hospitals_with_distance(lat=target_lat, long=target_lon, radius=5000)
+#         return res
+    
+#     return "Could not determine location."
 
 
 

@@ -39,6 +39,9 @@ refiner_model = ChatHuggingFace(
 base_model = ChatGoogleGenerativeAI(
     model='gemini-2.0-flash'
 )
+base_model2 = ChatGoogleGenerativeAI(
+    model='gemini-2.0-flash'
+)
 
 groq_llm = ChatGroq(
     model='openai/gpt-oss-120b'
