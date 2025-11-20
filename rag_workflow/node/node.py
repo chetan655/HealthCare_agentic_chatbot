@@ -21,6 +21,9 @@ import google.generativeai as genai
 import os
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# print("this is pai", GROQ_API_KEY)
 
 genai.configure(api_key=GOOGLE_API_KEY)
 # from utils import sanitize_ai_message
@@ -76,7 +79,7 @@ async def classifier(state: State) -> State:
 
     question = state.get('question')
     image = state.get("image", "")
-    # print("this is nnnnnnnnnnnnnnnnnnnnnnnnnnnnimg", image)
+    print("this is nnnnnnnnnnnnnnnnnnnnnnnnnnnnimg", image)
     if image:
         image_prompt = "there is image in request"
     else:
@@ -124,19 +127,50 @@ async def general_query_node(state: State, config) -> State:
 
 #==============================nearby hospitals node====================================
 
+# async def nearby_hospital_finder_node(state: State, config) -> State:
+#     """Finds the nearby hospitals."""
+#     print("nearby hospital node activate")
+#     question = state.get("question", "")
+#     summary = state.get("summary", "")
+#     lat = state.get("lat", "")
+#     long = state.get("long", "")
+#     # place_name
+
+#     print("lat", lat)
+
+#     try:
+#         chain = nearby_hospitals_prompt | groq_llm_for_general_with_tools
+#         res = await chain.ainvoke({"summary": summary, "question": question, "lat": lat, "long": long},config=config)
+#         return {"messages": [res]}
+#     except Exception as e:
+#         return {'error': f"Error refining query: {e}"}
+    
 async def nearby_hospital_finder_node(state: State, config) -> State:
-    """Finds the nearby hospitals."""
-    print("nearby hospital node activate")
     question = state.get("question", "")
     summary = state.get("summary", "")
 
+    print("api", GROQ_API_KEY)
+    
+    # Ensure we don't pass actual None objects to the prompt template
+    lat = str(state.get("lat", "")) if state.get("lat") is not None else ""
+    long = str(state.get("long", "")) if state.get("long") is not None else ""
+
+    print("this is lat", lat)
+    print("this is lat", long)
+
     try:
         chain = nearby_hospitals_prompt | groq_llm_for_general_with_tools
-        res = await chain.ainvoke({"summary": summary, "question": question},config=config)
+        res = await chain.ainvoke({
+            "question": question, 
+            "lat": lat, 
+            "long": long
+        }, config=config)
+
+        # print("this is res", res)
+        
         return {"messages": [res]}
     except Exception as e:
-        return {'error': f"Error refining query: {e}"}
-    
+        return {'error': f"Error in hospital node: {e}"}
     
 #==============================emergency query node=====================================
     
@@ -236,7 +270,7 @@ async def summarize_conv(state: State) -> State:
 async def formatter_node(state: State) -> State:
     """takes tool results from format final user-facing messages."""
     # print("total messages -> ", state["messages"])
-    messages = state["messages"][-2]
+    messages = state["messages"][-2:]
     question = state["question"]
     summary = state.get("summary", "")
 
@@ -248,6 +282,8 @@ async def formatter_node(state: State) -> State:
         "question": question,
         "summary": summary
     })
+
+    # print("this is res of formatter", res)
     return {"messages": [res]}
 
 
@@ -260,6 +296,14 @@ async def ocr_node(state: State) -> State:
     import PIL
     # image_bytes = state.get("image")
     image_path = state.get("image", "")
+
+    if not image_path:
+        print("DEBUG: No image path found in state.")
+        # Return early or handle the error appropriately
+        return {
+            "messages": ["Error: No image provided for OCR processing."],
+            "image": None 
+        }
 
     image = PIL.Image.open(image_path)
 
@@ -299,5 +343,5 @@ async def ocr_node(state: State) -> State:
         "extracted_text": extracted_text
     })
     # print("this is res", res)
-    return {"messages": [res]}
+    return {"messages": [res], "image": None}
 
