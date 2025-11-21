@@ -776,6 +776,8 @@ import traceback # Added for debugging
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Optional, AsyncGenerator
+from twilio.rest import Client
+from pydantic import BaseModel
 
 # LangGraph & AI Imports
 # Ensure 'main' works correctly and builder is compiled properly in main.py
@@ -799,6 +801,61 @@ UPLOAD_PATH.mkdir(exist_ok=True)
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX", "healthcare-agentic")
 MONGODB_URL = os.getenv("MONGODB_URL")
+
+app = FastAPI()
+
+#=====================sos interg===============
+TWILIO_SID = "ACc27766b55aca5e71ea89719fb93b6665"  
+TWILIO_TOKEN = "6a63c5b4a21f18d016eda3cb261f41a8"         
+TWILIO_FROM = "whatsapp:+14155238886"     
+
+EMERGENCY_CONTACTS = [
+    "whatsapp:+916375587086", # Person A (You)
+    "whatsapp:+916200734720"  # Person B (Friend)
+]
+
+class LocationData(BaseModel):
+    latitude: float
+    longitude: float
+
+def send_whatsapp_broadcast(lat: float, lng:float):
+    """Sends the SOS message to everyone in the list"""
+    # We use the global variables defined above
+    client = Client(TWILIO_SID, TWILIO_TOKEN)
+
+    google_maps_link = f"https://www.google.com/maps?q={lat},{lng}"
+
+
+    message_body = (
+        f"🚨 EMERGENCY SOS 🚨\n\n"
+        f"I need help immediately.\n"
+        f"Here is my current location:\n{google_maps_link}"
+    )
+
+    for contact in EMERGENCY_CONTACTS:
+        try:
+            message = client.messages.create(
+                body=message_body,
+                from_=TWILIO_FROM,
+                to=contact
+            )
+            # print(f"Success: Sent to {contact} (ID: {message.sid})")
+        except Exception as e:
+            print(f"Failed to send to {contact}: {e}")
+
+@app.post("/sos")
+async def trigger_sos(location: LocationData, background_tasks: BackgroundTasks):
+    # Run the sending function in the background
+    lat = location.latitude
+    lng = location.longitude
+    background_tasks.add_task(send_whatsapp_broadcast, lat, lng)
+
+    return {
+        "status": 200,
+        "message": "Broadcasting SOS to contacts list."
+    }
+
+
 
 # Initialize Pinecone (Global)
 pc = None
@@ -847,7 +904,7 @@ def _cleanup_file(path: Optional[Path]):
         except Exception as e:
             print(f"File cleanup failed: {e}")
 
-app = FastAPI()
+
 
 @app.get("/")
 async def home():

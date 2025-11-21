@@ -45,6 +45,9 @@ aiohttp==3.12.13
 python-dotenv==1.1.1
 pydantic==2.11.7
 
+twilio
+requests
+
 # -----------------------
 # LangChain Ecosystem
 # -----------------------
