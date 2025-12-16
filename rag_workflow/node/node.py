@@ -276,7 +276,8 @@ async def formatter_node(state: State) -> State:
 
     # print("result of formatter", messages)
 
-    chain = formatter_prompt | base_model
+    # chain = formatter_prompt | base_model
+    chain = formatter_prompt | groq_llm
     res = await chain.ainvoke({
         "recent_context": messages,
         "question": question,
