@@ -2,115 +2,143 @@
 # # uvicorn
 
 
-# # langgraph
-# # langchain
-# # langchain-core
+# # # langgraph
+# # # langchain
+# # # langchain-core
 
-# # langchain-google-genai
-# # langchain-huggingface
-# # langchain-groq
-# # langchain-tavily
+# # # langchain-google-genai
+# # # langchain-huggingface
+# langchain-groq
+# langchain-tavily
 
-# # langgraph-checkpoint-mongodb
+# # # langgraph-checkpoint-mongodb
 
-# # pydantic
+# pydantic
 
-# # python-dotenv
+# python-dotenv
 
-# # aiohttp
+# aiohttp
 
-# # langchain-pinecone
-# # google-generativeai
+# langchain-pinecone
+# google-generativeai
 
-# # fuzzywuzzy
-# # python-Levenshtein
+# fuzzywuzzy
+# python-Levenshtein
 
-# # Pillow
-# # pandas
+# Pillow
+# # # pandas
 
 
-# # -----------------------
-# # FastAPI + Server
-# # -----------------------
-# # -----------------------
-# # FastAPI + Server
-# # -----------------------
+# # # -----------------------
+# # # FastAPI + Server
+# # # -----------------------
+# # # -----------------------
+# # # FastAPI + Server
+# # # -----------------------
 
-# # -----------------------
-# # FastAPI + Server
-# # -----------------------
-# fastapi==0.117.1
-# uvicorn==0.35.0
-# aiohttp==3.12.13
-# python-dotenv==1.1.1
-# pydantic==2.11.7
+# # # -----------------------
+# # # FastAPI + Server
+# # # -----------------------
+# # fastapi==0.117.1
+# # uvicorn==0.35.0
+# # aiohttp==3.12.13
+# # python-dotenv==1.1.1
+# # pydantic==2.11.7
 
 # twilio
 # requests
 
-# # -----------------------
-# # LangChain Ecosystem
-# # -----------------------
-# langchain==0.3.26
-# langchain-core==0.3.76
-# langchain-google-genai==2.0.10
-# langchain-huggingface==0.3.0
-# langchain-groq==0.3.8
-# langchain-tavily==0.2.11
-# langchain-pinecone==0.2.13
+# # # -----------------------
+# # # LangChain Ecosystem
+# # # -----------------------
+# # langchain==0.3.26
+# # langchain-core==0.3.76
+# # langchain-google-genai==2.0.10
+# # langchain-huggingface==0.3.0
+# # langchain-groq==0.3.8
+# # langchain-tavily==0.2.11
+# # langchain-pinecone==0.2.13
 
-# # -----------------------
-# # LangGraph
-# # -----------------------
-# langgraph==0.6.5
-# langgraph-checkpoint-mongodb==0.2.1
+# # # -----------------------
+# # # LangGraph
+# # # -----------------------
+# # langgraph==0.6.5
+# # langgraph-checkpoint-mongodb==0.2.1
 
-# # -----------------------
-# # Vector DB
-# # -----------------------
-# pinecone==7.3.0
+# # # -----------------------
+# # # Vector DB
+# # # -----------------------
+# pinecone
 
-# # -----------------------
-# # Google GenAI
-# # -----------------------
-# google-generativeai==0.8.5
+# # # -----------------------
+# # # Google GenAI
+# # # -----------------------
+# # google-generativeai==0.8.5
 
-# # -----------------------
-# # Utilities
-# # -----------------------
-# fuzzywuzzy==0.18.0
-# python-Levenshtein==0.27.3
-# Pillow==11.0.0
-# pandas==2.3.0
+# # # -----------------------
+# # # Utilities
+# # # -----------------------
+# # fuzzywuzzy==0.18.0
+# # python-Levenshtein==0.27.3
+# # Pillow==11.0.0
+# # pandas==2.3.0
 
-# python-multipart==0.0.9
+# # python-multipart==0.0.9
 
+# fastapi
+# uvicorn
+# langgraph
+# langgraph-checkpoint-postgres
+# langchain-core
+# pinecone
+# psycopg[binary]
+# python-dotenv
+# python-multipart
+# sse-starlette
+# aiohttp
+# httpx
+# pydantic
+# streamlit
+
+# langchain
+# langchain-community
+# langchain-google-genai
+# langchain-openai
+# langchain-pinecone
 
 fastapi
 uvicorn
-pydantic
-python-multipart
-email-validator
 
-httpx
-requests
-
-numpy
-pandas
-scikit-learn
-scipy
-joblib
+langgraph
+langgraph-checkpoint-postgres
 
 langchain
 langchain-core
-langgraph
-langgraph-checkpoint
-langgraph-prebuilt
-langgraph-sdk
-langsmith
+langchain-community
+langchain-google-genai
+langchain-openai
+langchain-groq
+langchain-tavily
+langchain-pinecone
 
-orjson
-PyYAML
-zstandard
-xxhash
-dnspython
+google-generativeai
+
+pinecone
+psycopg[binary]
+
+pydantic
+python-dotenv
+python-multipart
+
+aiohttp
+httpx
+requests
+sse-starlette
+
+streamlit
+
+twilio
+
+fuzzywuzzy
+python-Levenshtein
+Pillow
