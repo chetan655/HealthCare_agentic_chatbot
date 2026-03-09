@@ -141,4 +141,4 @@ twilio
 
 fuzzywuzzy
 python-Levenshtein
-Pillow
+Pillow 
