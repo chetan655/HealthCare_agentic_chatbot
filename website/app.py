@@ -9,8 +9,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# BACKEND_URL = "https://healthcare-agentic-chatbot.onrender.com"
-BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = "https://healthcare-agentic-chatbot.onrender.com"
+# BACKEND_URL = "http://localhost:8000"
 
 # -------------------------------
 # Session State
