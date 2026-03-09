@@ -1,255 +1,179 @@
 
-
-from fastapi import FastAPI, Form, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Form, File, UploadFile, Request
 from fastapi.responses import StreamingResponse
+
 import os
 import time
 import uuid
-import traceback # Added for debugging
 from pathlib import Path
-from dotenv import load_dotenv
-from typing import Optional, AsyncGenerator
-from twilio.rest import Client
+from typing import Annotated
+
 from pydantic import BaseModel
 
-# LangGraph & AI Imports
-# Ensure 'main' works correctly and builder is compiled properly in main.py
-from main import AIMessage, AIMessageChunk, builder 
-from langgraph.checkpoint.mongodb import AsyncMongoDBSaver
-from pinecone import Pinecone
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from typing import Optional
+from contextlib import asynccontextmanager
 
-# --- Setup & Init ---
+# from langgraph.checkpoint.mongodb import AsyncMongoDBSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langchain_core.messages import AIMessage, AIMessageChunk
+
+from pinecone import Pinecone
+
+from main import builder
+# builder = None
+
+from dotenv import load_dotenv
+
+########### load dotenv ################
 try:
     load_dotenv()
 except Exception as e:
-    print("Failed to load .env:", e)
+    raise Exception("Failed to load .env", e)
 
-# Initialize Embedding Model
-emb_model = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+# print("this is apikey: ", os.getenv("GOOGLE_API_KEY"))
 
-UPLOAD_PATH = Path("temp")
-UPLOAD_PATH.mkdir(exist_ok=True)
-
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX", "healthcare-agentic")
-MONGODB_URL = os.getenv("MONGODB_URL")
-
-app = FastAPI()
-
-#=====================sos interg===============
-TWILIO_SID = "ACc27766jfudca5e71ea89719fb93b6665"  
-TWILIO_TOKEN = "6a63c5b4a21jnnu016eda3cb261f41a8"         
-TWILIO_FROM = "whatsapp:+14098238886"     
-
-EMERGENCY_CONTACTS = [
-    "whatsapp:+919739487638", # Person A (You)
-    "whatsapp:+919375986354"  # Person B (Friend)
-]
-
-class LocationData(BaseModel):
-    latitude: float
-    longitude: float
-
-def send_whatsapp_broadcast(lat: float, lng:float):
-    """Sends the SOS message to everyone in the list"""
-    # We use the global variables defined above
-    client = Client(TWILIO_SID, TWILIO_TOKEN)
-
-    google_maps_link = f"https://www.google.com/maps?q={lat},{lng}"
+try:
+    PostgresURL = os.getenv("PostgresURL")
+except Exception as e:
+    raise Exception("PostgresURL not found.")
 
 
-    message_body = (
-        f"🚨 EMERGENCY SOS 🚨\n\n"
-        f"I need help immediately.\n"
-        f"Here is my current location:\n{google_maps_link}"
-    )
+########### init ##############
+from services.embedding_service import EmbeddingService
+from services.file_service import FileService
+from services.pinecone_service import PineconeService
 
-    for contact in EMERGENCY_CONTACTS:
-        try:
-            message = client.messages.create(
-                body=message_body,
-                from_=TWILIO_FROM,
-                to=contact
-            )
-            # print(f"Success: Sent to {contact} (ID: {message.sid})")
-        except Exception as e:
-            print(f"Failed to send to {contact}: {e}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.file_service = FileService(upload_path=Path("temp"))
+    app.state.embedding_service = EmbeddingService()
+    app.state.pinecone_service = PineconeService()
 
-@app.post("/sos")
-async def trigger_sos(location: LocationData, background_tasks: BackgroundTasks):
-    # Run the sending function in the background
-    lat = location.latitude
-    lng = location.longitude
-    background_tasks.add_task(send_whatsapp_broadcast, lat, lng)
+    async with AsyncPostgresSaver.from_conn_string(
+        conn_string=PostgresURL
+    ) as checkpointer:
 
-    return {
-        "status": 200,
-        "message": "Broadcasting SOS to contacts list."
-    }
+        await checkpointer.setup()
+        app.state.checkpointer = checkpointer
 
+        app.state.graph = builder.compile(
+            checkpointer=app.state.checkpointer
+        )
 
+        print("Application startup completed.")
+        yield
 
-# Initialize Pinecone (Global)
-pc = None
-_index = None
-_pinecone_initialized = False
+    # await app.state.checkpointer.close()
+    print("Application shutdown.")
 
-if PINECONE_API_KEY:
-    try:
-        pc = Pinecone(api_key=PINECONE_API_KEY)
-        existing = [idx["name"] for idx in pc.list_indexes()]
-        if PINECONE_INDEX not in existing:
-            pc.create_index(
-                name=PINECONE_INDEX,
-                dimension=768,
-                metric="cosine",
-                spec={"serverless": {"cloud": "aws", "region": "us-east-1"}},
-            )
-            time.sleep(2)
-        _index = pc.Index(PINECONE_INDEX)
-        _pinecone_initialized = True
-    except Exception as e:
-        print(f"Pinecone init warning: {e}")
-
-# --- Helper Functions ---
-
-def _get_embedding(text: Optional[str] = None):
-    if not text: return None
-    try:
-        return emb_model.embed_query(text)
-    except Exception as e:
-        print(f"Embedding error: {e}")
-        return None
-
-def _save_to_pinecone(upsert_id: str, vector, meta: dict, namespace: Optional[str] = None):
-    if not _pinecone_initialized or vector is None: return
-    try:
-        _index.upsert([(upsert_id, vector, meta)], namespace=namespace)
-    except Exception as e:
-        print(f"Pinecone upsert error: {e}")
-
-def _cleanup_file(path: Optional[Path]):
-    if path and path.exists():
-        try:
-            path.unlink()
-            print(f"Cleaned up file: {path}")
-        except Exception as e:
-            print(f"File cleanup failed: {e}")
-
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
 async def home():
-    return {"message": "API Robust and Running"}
+    return {"message": "API working."}
+
+# class ChatModel(BaseModel):
+#     question: Annotated[str, Form()]
+#     lat: Annotated[float, Form()]
+#     long: Annotated[float, Form()]
+#     image: Annotated[UploadFile, File()]
 
 @app.post("/chat")
 async def chat(
-    question: str = Form(...),
-    thread_id: str = Form(...),
-    lat: str = Form(...),
-    long: str = Form(...),
-    image: Optional[UploadFile] = File(None)
+    request: Request,
+    question: Annotated[str, Form()],
+    # lat: Annotated[float, Form()],
+    # long: Annotated[float, Form()],
+    # lat: str = "29.9478",
+    # long: str = "76.8170",
+    thread_id: Annotated[str, Form()],
+    lat: Annotated[str, Form()], #= "29.9478",
+    long: Annotated[str, Form()], #= "76.8170"
+    image: Annotated[UploadFile | None, File()] = None,
+    
+    # chatModel: ChatModel
 ):
-    """
-     Robust endpoint accepting multipart/form-data.
-    """
+    # question = chatModel.question
+    # lat = chatModel.lat
+    # long = chatModel.long
+    # image = chatModel.image
     
-    # 1. Handle Image Upload Safely (Async)
-    image_path: Optional[Path] = None
-    
-    # Logic: Only process if image object exists AND has a filename
-    if image and image.filename:
-        try:
-            file_extension = os.path.splitext(image.filename)[1]
-            unique_filename = f"{uuid.uuid4()}{file_extension}"
-            image_path = UPLOAD_PATH / unique_filename
-            
-            # FIX: Use await read() instead of shutil for async safety
-            content = await image.read()
-            with open(image_path, "wb") as f:
-                f.write(content)
-                
-        except Exception as e:
-            print(f"Error saving file: {e}")
-            image_path = None
-    
-    # 2. Prepare LangGraph Config
+    # config = {"configurable": {"thread_id": "id0", "user_id": "id0"}}
+
+    print("lat and long", lat, long)
+
+    graph = request.app.state.graph
+    file_service = request.app.state.file_service
+    embedding_service = request.app.state.embedding_service
+    pinecone_service = request.app.state.pinecone_service
+
+    image_path = None
+    if image:
+        image_path = await file_service.save_image(image)
+    print("this is image_path: ", image_path)
+
     config = {"configurable": {"thread_id": thread_id}}
-    
-    # 3. Define the Streaming Generator
-    async def response_generator() -> AsyncGenerator[str, None]:
-        fulltext = ""
-        
-        # Determine the argument to pass to LangGraph
-        # If path exists, pass string path. If not, pass None.
-        image_arg = str(image_path) if (image_path and image_path.exists()) else None
-        
+
+    async def response_generator():
+        response = ""        
+
         try:
-            if not MONGODB_URL:
-                raise ValueError("MONGODB_URL is not set in environment variables.")
-
-            async with AsyncMongoDBSaver.from_conn_string(MONGODB_URL) as saver:
-                graph = builder.compile(checkpointer=saver)
-                
-                # Stream from LangGraph
-                async for chunk, metadata in graph.astream(
-                    {"question": question, "image": image_arg, "lat": lat, "long": long},
-                    config=config,
-                    stream_mode="messages",
-                ):
-                    if isinstance(chunk, (AIMessage, AIMessageChunk)):
-                        node = metadata.get("langgraph_node") if metadata else None
-                        # Adjust these node names based on your actual graph in main.py
-                        if node in ["general", "emergency", "formatter_node", "nearby_hospitals", "agent"]: 
-                            text = chunk.content or ""
-                            fulltext += text
-                            yield text
-
+            async for chunk, metadata in graph.astream(
+            {"question": question,
+            "lat": lat,
+            "long": long,
+            "image": str(image_path) if image_path else None},
+            config=config,
+            stream_mode="messages"
+            ):
+                if isinstance(chunk, (AIMessage, AIMessageChunk)):
+                    node = metadata.get("langgraph_node") if metadata else None
+                    if node in ["general", "general_formatter", "hospital_formatter", "ocr_formatter"]:
+                        text = chunk.content or ""
+                        response += text
+                        yield text
         except Exception as e:
-            # FIX: Print traceback to console to find the EXACT line in main.py failing
-            print("---------- ERROR TRACEBACK ----------")
-            traceback.print_exc()
-            print("-------------------------------------")
-            yield f"\n[System Error]: An error occurred while processing: {str(e)}"
-        
+            raise Exception("Error generating response: ", e)
         finally:
-            # 4. Cleanup & Post-Processing
-            
-            # A. Cleanup File immediately
-            _cleanup_file(image_path)
-            
-            # B. Save to Pinecone
-            if fulltext.strip():
-                try:
-                    # Save User Query
-                    q_vec = _get_embedding(question)
-                    if q_vec:
-                        _save_to_pinecone(
-                            str(uuid.uuid4()), q_vec,
-                            {
-                                "user_id": "12345",
-                                "thread_id": thread_id,
-                                "role": "user",
-                                "timestamp": int(time.time() * 1000),
-                                "page_content": question
-                            }
-                        )
-                    
-                    # Save AI Response
-                    ai_vec = _get_embedding(fulltext)
-                    if ai_vec:
-                        _save_to_pinecone(
-                            str(uuid.uuid4()), ai_vec,
-                            {
-                                "user_id": "12345",
-                                "thread_id": thread_id,
-                                "role": "ai",
-                                "timestamp": int(time.time() * 1000),
-                                "page_content": fulltext
-                            }
-                        )
-                except Exception as e:
-                    print(f"Post-processing (Pinecone) error: {e}")
+            # delete image
+            file_service.cleanup_file(image_path)
+            # get embedding
+            # embedding = embedding_service.get_embedding(response)
+            # print("this is embedding: ", len(embedding))
+            # save to vector db
+            # if response.strip():
+            #     try:
+            #         q_vec = embedding_service.get_embedding(question)
+            #         if q_vec:
+            #             pinecone_service.upsert(
+            #                 str(uuid.uuid4()), q_vec,
+            #                 {
+            #                     "user_id": "12345",
+            #                     "thread_id": thread_id,
+            #                     "role": "user",
+            #                     "timestamp": int(time.time() * 1000),
+            #                     "page_content": question
+            #                 }
+            #             )
 
-    return StreamingResponse(response_generator(), media_type="text/plain")
+            #         ai_vec = embedding_service.get_embedding(response)
+            #         if ai_vec:
+            #             pinecone_service.upsert(
+            #                 str(uuid.uuid4()), ai_vec,
+            #                 {
+            #                     "user_id": "12345",
+            #                     "thread_id": thread_id,
+            #                     "role": "ai",
+            #                     "timestamp": int(time.time() * 1000),
+            #                     "page_content": response
+            #                 }
+            #             )
+            #     except Exception as e:
+            #         print(f"Post-porcessing pinecone error: {e}")
+
+        
+    return StreamingResponse(response_generator())
+    
+
+    

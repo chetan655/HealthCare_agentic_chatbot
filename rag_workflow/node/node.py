@@ -1,224 +1,380 @@
+import os
+import base64
+import json
+from io import BytesIO
+from dotenv import load_dotenv
+
+# import google.genai as genai
+
+
+from typing import Dict, Any
+from PIL import Image, ImageOps
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage, AIMessage, RemoveMessage
+from langchain_core.runnables import Runnable
+
 from schema.schema import State
+
+
 from prompts.prompt import (
-    refiner_prompt, 
-    classifier_prompt, 
-    general_query_prompt,
-    emergency_query_prompt,
-    formatter_prompt,
+    classifier_prompt,
+    general_prompt,
+    general_prompt1,
+    general_prompt_formatter,
     nearby_hospitals_prompt,
+    formatter_prompt,
+    hospital_formatter_prompt,
     image_ocr_prompt,
-    text_extract_prompt
-)
-from models.models import (
-    refiner_model, classifier_model, 
-    base_model, base_model_with_tools, 
-    groq_llm_for_general_with_tools,
-    summary_model,
-    groq_llm
+    ocr_formatter_prompt
 )
 
-import google.generativeai as genai
-import os
+from models.model import (
+    classifier_model,
+    flash_2_5,
+    groq_llm,
+    groq_llm_with_tools
+)
+
+load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# print("this is pai", GROQ_API_KEY)
-
-genai.configure(api_key=GOOGLE_API_KEY)
-# from utils import sanitize_ai_message
-
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.messages.utils import (
-    trim_messages,
-    count_tokens_approximately
-)
-from langchain_core.messages import RemoveMessage, HumanMessage, SystemMessage
-
-from utils import retriever
-
-parser = StrOutputParser()
-
-#======================memory_retriever_node==================
-async def memory_retriever_node(state: State) -> State:
-    """This function fetches past relevent documents."""
-    question = state.get("question", "")
-
-    rel_docs = retriever.invoke(question)
-
-    # print("this is relevent docs", rel_docs)
-
-    state['memory_docs'] = rel_docs
+# genai.configure(api_key=GOOGLE_API_KEY)
 
 
-    return state
 
+# python is sync by default but can also act as async using asyncio
+# asyncio is python lib used to write non-blocking code
 
-#===========================refiner======================================
-
-async def refiner(state: State) -> State:
-    """This function refine the user query. remove ambiguity"""
-    # print("refiner actiavted")
-    question = state['question']
-    # print("query -> ", question)
-    try:
-        chain = refiner_prompt | refiner_model 
-        res = await chain.ainvoke({'question': question})
-        print("res", res)
-        # res = {'role': 'user', 'content': res.content}
-        return {'messages': [res]}
-    except Exception as e:
-        return {'error': f"Error refining query: {e}"}  # 
-    # finally:
-    #     print("refiner deactivated")
-    
-
-#=========================================classifier==================================
+###################classifier########################
 async def classifier(state: State) -> State:
-    """This function returns the category of the question."""
+    """Returns the category of the question."""
 
-    question = state.get('question')
-    image = state.get("image", "")
-    print("this is nnnnnnnnnnnnnnnnnnnnnnnnnnnnimg", image)
-    if image:
-        image_prompt = "there is image in request"
-    else:
-        image_prompt = "there is no image in request"
-    try: 
-        chain = classifier_prompt | classifier_model 
-        res = await chain.ainvoke({'question': question, "image_prompt": image_prompt})
-        print("category -> ", res)
+    print("classifier node active")
+
+    question = state.get("question", "")
+    summary = state.get("summary", "")
+    
+    has_image = bool(state.get("image"))
+
+    # print("this is state", state)
+
+
+    try:
+        chain = classifier_prompt | classifier_model
+        res = await chain.ainvoke({'question': question, "summary": summary, 'has_image': has_image})
+        print("this is category: ", res)
         return {'category': res.category, 'messages': [question]}
     except Exception as e:
-        return {'error': f"Error refining query: {e}"}
-    # finally:
-    #     print("classifier deactivated.")
+        print("error at classifier:", e)
+        # raise e
+        # return {'error': f"Error catogarizing: {e}"}
 
+##################general###########################
+async def general(state: State):
+    """Returns answer to general query."""
 
+    print("general node active")
 
-#==================================================general query===========================
-    
-async def general_query_node(state: State, config) -> State:
-    """This function returns answer to general query."""
-    print("general node activated.")
-    question = state.get('question', "")
     summary = state.get("summary", "")
-    retrieved_docs = state.get("memory_docs", "")
-    # print("question to general: ", question)
-    # messages = trim_messages(
-    #     state['messages'],
-    #     strategy='last',
-    #     token_counter=count_tokens_approximately,
-    #     max_tokens=100
-    # )
-    # print("this is msgt -> ", messages)
-    try:
-        chain = general_query_prompt | groq_llm_for_general_with_tools 
-        res = await chain.ainvoke({"summary": summary, 'question': question, "retrieved_docs": retrieved_docs}, config=config)
-        """we only provide config to async model invoke if if python version < 3.11. this enable streaming"""
-        # clean_res = sanitize_ai_message(ai_msg=res, keep_tool_calls=True)
-        # print("output of res -> ", res)
-        # print("output of clean_response -> ", clean_res)
-        # print("res from general", res)
-        return {'messages': [res]}
-    except Exception as e:
-        return {'error': f"Error refining query: {e}"}
-    
-
-#==============================nearby hospitals node====================================
-
-# async def nearby_hospital_finder_node(state: State, config) -> State:
-#     """Finds the nearby hospitals."""
-#     print("nearby hospital node activate")
-#     question = state.get("question", "")
-#     summary = state.get("summary", "")
-#     lat = state.get("lat", "")
-#     long = state.get("long", "")
-#     # place_name
-
-#     print("lat", lat)
-
-#     try:
-#         chain = nearby_hospitals_prompt | groq_llm_for_general_with_tools
-#         res = await chain.ainvoke({"summary": summary, "question": question, "lat": lat, "long": long},config=config)
-#         return {"messages": [res]}
-#     except Exception as e:
-#         return {'error': f"Error refining query: {e}"}
-    
-async def nearby_hospital_finder_node(state: State, config) -> State:
     question = state.get("question", "")
-    summary = state.get("summary", "")
+    retrieved_docs = state.get("memory_docs", "")
 
-    print("api", GROQ_API_KEY)
-    
-    # Ensure we don't pass actual None objects to the prompt template
-    lat = str(state.get("lat", "")) if state.get("lat") is not None else ""
-    long = str(state.get("long", "")) if state.get("long") is not None else ""
-
-    print("this is lat", lat)
-    print("this is lat", long)
 
     try:
-        chain = nearby_hospitals_prompt | groq_llm_for_general_with_tools
-        res = await chain.ainvoke({
-            "question": question, 
-            "lat": lat, 
-            "long": long
-        }, config=config)
-
+        chain = general_prompt1 | groq_llm
+        res = await chain.ainvoke({"question": question, "summary": summary, "retrieved_docs": retrieved_docs})
         # print("this is res", res)
-        
         return {"messages": [res]}
     except Exception as e:
-        return {'error': f"Error in hospital node: {e}"}
+        print("error at general", e)
+        # raise e
     
-#==============================emergency query node=====================================
+    # finally:
+    #     print("this is from messages: ", state["messages"])
+
+
+##################33 general formatter #######################
+
+async def general_formatter(state: State) -> State:
+
+    print("general formatter active")
+
+    summary = state.get("summary", "")
+    question = state.get("question", "")
+    retrieved_docs = state.get("memory_docs", "")
+    tool_result = state["messages"][-1]
+
+    chain = general_prompt_formatter | groq_llm
+    res = await chain.ainvoke({
+        "summary": summary,
+        "question": question,
+        "retrieved_docs": retrieved_docs,
+        "tool_result": tool_result
+    })
+    return {"messages": [res]}
+
+
+
+async def find_nearby_hospitals(state: State):
+    """node to find nearby hospitals"""
+
+    print("find nearby hospitals node active")
+
+    question = state.get("question")
     
-async def emergency_query_node(state: State, config) -> State:
-    """This function is to answer emergency quesions."""
-    print("emergency node activated.")
+    lat = str(state.get("lat", ""))
+    long = str(state.get("long", ""))
+
+    print("lat and long at hos", lat, long, question)
+
+
+
+    try:
+        chain = nearby_hospitals_prompt | groq_llm_with_tools
+        res = await chain.ainvoke({
+            "question": question,
+            "lat": lat,
+            "long": long
+        })
+        # print("this is response of nearby hosptials: ", res)
+        return {"messages": [res]}
+    except Exception as e:
+        print(f"error finding hospitals: {e}")
+
+
+####################33 formatter node ##################################
+
+async def formatter_node(state: State) -> State:
+    """Generate the final response."""
+
+    print("formatter node active")
+
+    messages = state["messages"][-2:]
+    question = state["question"]
+    summary = state.get("summary", "")
+
+    chain = formatter_prompt | groq_llm
+    res = await chain.ainvoke({
+        "recent_context": messages,
+        "question": question,
+        "summary": summary
+    })
+
+    print("this is response of formatter: ", res)
+    return {"messages": [res]}
+
+
+######################## hospital formatter ###################3
+async def hospital_formatter(state: State) -> State:
+    """Generte final respone for finding nearby hospitals."""
+
+    print("hospital formatter node active")
+
+    question = state["question"]
+    tool_data = state["messages"][-1]
+
+    chain = hospital_formatter_prompt | groq_llm
+    res = await chain.ainvoke({
+        "question": question,
+        "tool_result": tool_data
+    })
+    return {"messages": [res]}
+
+
+
+#####################333 ocr node ########################3
+
+# async def oc_node(state: State) -> State:
+    
+#     summary = state.get("summary", "")
+#     question = state.get("question", "")
+
+#     print("ocr node active")
+    
+#     import PIL
+
+#     image_path = state.get("image", "")
+
+#     if not image_path:
+#         print("DEBUG: No image path found in state.")
+#         # Return early or handle the error appropriately
+#         return {
+#             "messages": ["Error: No image provided for OCR processing."],
+#             "image": None 
+#         }
+    
+#     image = PIL.Image.open(image_path)
+
+#     prompt = """
+#             Analyze the image of this medicine label. Extract the following information and return it as a clean JSON object.
+#             Do not include any introductory text or markdown formatting like ```json.
+            
+#             The keys in the JSON should be:
+#             - "medicine_name"
+#             - "manufacturer"
+#             - "active_salts" (as a list of strings)
+#             - "expiry_date" (in DD-MM-YYYY format if possible, otherwise MM-YYYY)
+            
+#             If a piece of information is not available, set its value to null.
+#         """
+    
+#     model = genai.GenerativeModel("gemini-2.5-flash")
+
+#     response = model.generate_content([image, prompt])
+#     extracted_text = response.text.strip()("```json", "").replace("```", "")
+
+#     chain = image_ocr_prompt | groq_llm_with_tools
+#     res = chain.ainvoke({
+#         "extracted_text": extracted_text
+#     })
+#     print(f"ocr res: {res}")
+
+
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Alternative if available: "meta-llama/llama-4-maverick-17b-128e-instruct" 
+
+async def oc_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    OCR node: extract structured medicine label info using Groq vision model + optional refinement
+    """
+    print("ocr node active")
+    question = state.get("question", "")
+    image_path = state.get("image", "")
+    # tool_result = state["messages"]
+
+    # print(f"image -ath {image_path}")
+
+    if not image_path or not isinstance(image_path, str):
+        print("no image")
+        # return {
+        #     "messages": ["Error: No image provided for OCR processing."]
+        # }
+
+    try:
+        image = Image.open(image_path)
+        image = ImageOps.exif_transpose(image) 
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        buffered = BytesIO()
+        image.save(buffered, format="JPEG")
+        buffered.seek(0)  
+        base64_img = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+        prompt = """
+You are an expert at reading medicine labels (strips, bottles, cartons, blister packs — including Indian & international formats).
+Analyze this image carefully and extract ONLY the requested fields.
+Return **valid JSON only** — nothing else. No explanations, no markdown, no ```json, no extra text.
+
+Rules:
+- Missing / unclear / not visible → null
+- "active_salts": list of strings, include strength/dosage if present e.g. ["Paracetamol 500 mg", "Ibuprofen 200 mg"]
+- "expiry_date": prefer DD-MM-YYYY; if only month-year → "MM-YYYY"; if ambiguous → null
+- Use exact spelling for medicine names & manufacturers
+- Ignore MRP, batch no, manufacturing date unless part of name/salts
+
+Output structure (JSON object):
+{
+  "medicine_name": string | null,
+  "manufacturer": string | null,
+  "active_salts": array of strings | null,
+  "expiry_date": string | null
+}
+"""
+        llm = ChatGroq(
+            model=VISION_MODEL,
+            temperature=0.0,          
+            max_tokens=1024,
+            # api_key=os.getenv("GROQ_API_KEY")  # usually from env
+        )
+
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"},
+                },
+            ]
+        )
+
+        response: AIMessage = await llm.ainvoke([message])
+        raw_text = response.content.strip()
+
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:].strip()
+        raw_text = raw_text.removesuffix("```").strip()
+
+        # print(f"this is raw data: {raw_text}")
+
+        try:
+            extracted = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            print(f"error here {e}")
+            # return {
+            #     "messages": ["OCR failed — invalid JSON from vision model."],
+            #     "ocr_result": {"error": "invalid_json", "raw": raw_text},
+            #     "image": image_path
+            # }
+        chain = image_ocr_prompt | groq_llm_with_tools
+
+        groq_input = {
+            "extracted_text": json.dumps(extracted, ensure_ascii=False),
+        }
+
+        res = await chain.ainvoke(groq_input)
+
+        # print(f"this is res {res}")
+
+        return {
+            "messages": [res]
+        }
+
+    except Exception as e:
+        print(f"error {e}")
+        # return {
+        #     "messages": [f"OCR error: {str(e)}"],
+        #     "ocr_result": None,
+        #     "image": image_path
+        # }
+
+
+###################33333 ocr formatter ###########################
+
+async def ocr_formatter(state: State) -> State:
+
+    print("ocr formatter node active")
+
     question = state.get("question", "")
     summary = state.get("summary", "")
-    
-    # messages = trim_messages(
-    #     state['messages'],
-    #     strategy='last',
-    #     token_counter=count_tokens_approximately,
-    #     max_tokens=100
-    # )
-    # print("this is msgt -> ", messages)
-    try:
-        chain = emergency_query_prompt | groq_llm_for_general_with_tools 
-        res = await chain.ainvoke({"summary": summary, 'question': question}, config=config)
-        # print("res from emergency", res)
-        return {'messages': [res]}
-    except Exception as e:
-        return {'error': f"Error refining query: {e}"}
-    
+    tool_result = state["messages"][-1]
+
+    # print(f"this is tool result :{tool_result}")
+
+    chain = ocr_formatter_prompt | groq_llm
+    res = await chain.ainvoke({
+        "question": question,
+        "summary": summary,
+        "tool_result": tool_result
+    })
+    return {"messages": [res]}
 
 
-#=====================================summary======================================
 
-async def summarize_conv(state: State) -> State:
+######################### summarize conv ###################
+
+async def sumarize_conv(state: State) -> State:
+
+    print("summarize node active")
 
     summary = state.get("summary", "")
     messages = state.get("messages", "")
 
-    # transcript_only = ""
-    # if len(messages) >=1 :
-    #     for i in messages:
-    #         transcript_only += i.content
-
     transcript_parts = []
-
-    # print("summary node activated")
 
     if messages:
         for m in messages:
-            # get raw content (handle plain values or objects with .content)
             content = getattr(m, "content", m)
-
-            # if content is a list, join elements; otherwise stringify
             if isinstance(content, list):
                 transcript_parts.append(" ".join(str(c) for c in content))
             else:
@@ -227,122 +383,58 @@ async def summarize_conv(state: State) -> State:
     transcript_only = " ".join(part for part in transcript_parts if part)
 
     if summary:
-    # Update only when new information exists; otherwise return the old summary unchanged
         summary_msg = (
-        f"Existing summary: {summary}\n\n"
-        "Your task: Review the conversation above and determine whether it contains any "
-        "new, changed, or corrected information that should be reflected in the summary.\n\n"
-        "Rules:\n"
-        "1. ONLY update the summary if truly new or modified information appears.\n"
-        "2. If nothing new is present, RETURN THE EXISTING SUMMARY EXACTLY as-is.\n"
-        "3. Keep the summary extremely concise but DO NOT remove or lose any important details.\n"
-        "4. Preserve all essential facts, decisions, instructions, and outcomes.\n"
-        "5. Do NOT add speculation, interpretations, or details not present in the conversation."
+    f"Existing summary:\n{summary}\n\n"
+    "Your task: Review the new conversation messages above and update the summary ONLY if there is genuinely new, changed, corrected, or additional important information.\n\n"
+
+    "STRICT RULES:\n"
+    "1. ALWAYS preserve critical factual details, especially:\n"
+    "   - Names of hospitals, clinics, doctors, patients.\n"
+    "   - Medicine names (brand/generic), dosage, frequency, duration.\n"
+    "   - Test results, diagnoses, symptoms, allergies.\n"
+    "   - Dates, times, locations, and instructions.\n"
+    "   - Any numbers or medical measurements.\n"
+
+    "2. NEVER remove, generalize, or replace proper nouns, medicine names, dosages, or other precise medical facts.\n"
+
+    "3. If there is NO meaningful new information, RETURN THE EXISTING SUMMARY EXACTLY AS-IS.\n"
+
+    "4. If updating is needed, keep the summary **as short and compact as possible while preserving ALL important facts**.\n"
+
+    "5. Prefer concise bullet points when listing medicines, symptoms, or instructions.\n"
+
+    "6. Do NOT add interpretations, assumptions, or external knowledge."
     )
+
     else:
-    # No previous summary — create a new concise one
         summary_msg = (
-        "Create an extremely concise summary of the entire conversation above. "
-        "Include all essential information, decisions, facts, and outcomes, without adding anything extra."
+    "Create a concise summary of the conversation above.\n\n"
+
+    "IMPORTANT: Preserve ALL critical medical facts, including:\n"
+    "- Hospital, clinic, and doctor names\n"
+    "- Medicine names (brand/generic), dosage, frequency, duration\n"
+    "- Symptoms, diagnoses, allergies\n"
+    "- Test results and medical measurements\n"
+    "- Dates, locations, and instructions\n"
+
+    "RULES:\n"
+    "1. Do NOT remove or generalize proper nouns, medicine names, dosages, or numbers.\n"
+    "2. Make the summary **as short as possible while keeping every important fact**.\n"
+    "3. Use bullet points for lists (medicines, symptoms, instructions).\n"
+    "4. Include only information explicitly stated in the conversation.\n"
+    "5. Do NOT add assumptions or external information."
     )
-
-    # print(summary_msg)
-    # messages = [HumanMessage(content=transcript_only)] + [HumanMessage(content=summary_msg)]
-
+        
     combined_msg = f"Conversation transcript: {transcript_only}\n\n {summary_msg}"
+
     messages = [
-    HumanMessage(content=combined_msg),
+        HumanMessage(content=combined_msg)
     ]
 
-    # print("this is msg", messages
+    res = await groq_llm.ainvoke(messages)
 
-    res = await summary_model.ainvoke(messages)
+    # print("this is res of sum", res)
 
-    # print("this is result", res)
-
-    remaining_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-2]]
+    remaining_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]]
 
     return {"summary": res.content, "messages": remaining_messages}
-
-
-#=====================================formatter node==========================
-
-async def formatter_node(state: State) -> State:
-    """takes tool results from format final user-facing messages."""
-    # print("total messages -> ", state["messages"])
-    messages = state["messages"][-2:]
-    question = state["question"]
-    summary = state.get("summary", "")
-
-    # print("result of formatter", messages)
-
-    # chain = formatter_prompt | base_model
-    chain = formatter_prompt | groq_llm
-    res = await chain.ainvoke({
-        "recent_context": messages,
-        "question": question,
-        "summary": summary
-    })
-
-    # print("this is res of formatter", res)
-    return {"messages": [res]}
-
-
-#==========================ocr node===============================
-
-async def ocr_node(state: State) -> State:
-    """takes image as input and gives json as output"""
-    summary = state.get("summary", "")
-    question = state.get("question", "")
-    import PIL
-    # image_bytes = state.get("image")
-    image_path = state.get("image", "")
-
-    if not image_path:
-        print("DEBUG: No image path found in state.")
-        # Return early or handle the error appropriately
-        return {
-            "messages": ["Error: No image provided for OCR processing."],
-            "image": None 
-        }
-
-    image = PIL.Image.open(image_path)
-
-    prompt = """
-            Analyze the image of this medicine label. Extract the following information and return it as a clean JSON object.
-            Do not include any introductory text or markdown formatting like ```json.
-            
-            The keys in the JSON should be:
-            - "medicine_name"
-            - "manufacturer"
-            - "active_salts" (as a list of strings)
-            - "expiry_date" (in DD-MM-YYYY format if possible, otherwise MM-YYYY)
-            
-            If a piece of information is not available, set its value to null.
-        """
-    
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    
-    response = model.generate_content([image, prompt])
-    extracted_text = response.text.strip().replace("```json", "").replace("```", "")
-
-    # if image_bytes:
-    #     # Convert to PIL Image
-    #     from PIL import Image
-    #     import io
-
-    #     img = Image.open(io.BytesIO(image_bytes))
-    #     chain0 = text_extract_prompt | base_model
-    #     extracted_text = await chain0.ainvoke({"image": img})
-
-    #     print("extracted text", extracted_text.content)
-
-    chain = image_ocr_prompt | groq_llm_for_general_with_tools
-    res = await chain.ainvoke({
-        "summary": summary,
-        "question": question or None,
-        "extracted_text": extracted_text
-    })
-    # print("this is res", res)
-    return {"messages": [res], "image": None}
-

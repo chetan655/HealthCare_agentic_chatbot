@@ -2,211 +2,139 @@ import os
 import asyncio
 
 from typing import Annotated, Optional
+# optional is union of a value and none -> meaning either value will be something or none
+# annotated helps to add extra data to the type
+# framework and library use the extra metadata data
 
-from langgraph.graph import StateGraph, START, END 
+from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.checkpoint.mongodb import MongoDBSaver
-
-from dotenv import load_dotenv
-
-from utils import  check_query_category
-from schema.schema import State
-from node.node import (
-    refiner, 
-    classifier, 
-    general_query_node, 
-    summarize_conv,
-    emergency_query_node,
-    formatter_node,
-    nearby_hospital_finder_node,
-    ocr_node,
-    memory_retriever_node
-)
-from models.models import tool_node, tools_condition, tools
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from langchain_core.messages import AIMessage, AIMessageChunk
 
-try:
-    load_dotenv()
-except Exception as e:
-    print(f"Failed to load .env: {e}")
+from utils import (
+    check_query_category,
+    route_after_tools
+)
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PostgresURL = os.getenv("PostgresURL")
+
+# tools = []
+
+from schema.schema import State
+
+from node.node import (
+    classifier,
+    general,
+    general_formatter,
+    find_nearby_hospitals,
+    formatter_node,
+    hospital_formatter,
+    oc_node,
+    ocr_formatter,
+    sumarize_conv
+)
+
+from models.model import tool_node
 
 
-# env variables
-MONGODB_URL = os.getenv('MONGODB_URL')
-# MONGODB_NAME = os.getenv('MONGODB_NAME')
-# MONGODB_COLLECTION_NAME = os.getenv('MONGODB_COLLECTION_NAME')
-
-
-# async mongodb connection
-# connection = get_mongo_connection(MONGODB_URL, MONGODB_NAME, MONGODB_COLLECTION_NAME
-
-
-    
 builder = StateGraph(State)
 
-# 1. Add Nodes
-builder.add_node('refiner', refiner)
-builder.add_node('classifier', classifier)
-builder.add_node('general', general_query_node)
-builder.add_node('summarize_conv', summarize_conv)
-builder.add_node('emergency_node', emergency_query_node)
-builder.add_node('formatter_node', formatter_node)
-builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
-builder.add_node('ocr', ocr_node)
-builder.add_node('memory_retriever_node', memory_retriever_node)
+builder.add_node("classifier", classifier)
+builder.add_node("general", general)
+builder.add_node("general_formatter", general_formatter)
+builder.add_node("find_nearby_hospitals", find_nearby_hospitals)
+builder.add_node("formatter_node", formatter_node)
+builder.add_node("hospital_formatter", hospital_formatter)
+builder.add_node("oc_node", oc_node)
+builder.add_node("ocr_formatter", ocr_formatter)
+builder.add_node("sumarize_conv", sumarize_conv)
+builder.add_node("tools", tool_node)
 
-# Tool Node (Prebuilt in new LangGraph)
-builder.add_node('tools', ToolNode(tools)) 
-
-# 2. Entry Point
-builder.set_entry_point("memory_retriever_node")
-
-# 3. Standard Edges
-builder.add_edge('memory_retriever_node', 'classifier')
-builder.add_edge('tools', 'formatter_node')
-builder.add_edge('formatter_node', 'summarize_conv')
-builder.add_edge('summarize_conv', END)
-
-# 4. Conditional Edge: CLASSIFIER (Critical Fix)
-# The classifier determines which specialized node to go to next.
-# Ensure 'check_query_category' returns the exact string keys used in the dict below.
+builder.add_edge(START, "classifier")
 builder.add_conditional_edges(
-    'classifier',
+    "classifier",
     check_query_category,
     {
         "general": "general",
-        "emergency_node": "emergency_node",
-        "nearby_hospitals": "nearby_hospitals",
-        "ocr": "ocr"
+        # "emergency": "emergency",
+        "find_nearby_hospitals": "find_nearby_hospitals",
+        "ocr": "oc_node"
     }
 )
 
-# 5. Conditional Edges: TOOLS
-# If the model calls a tool -> Go to 'tools' node
-# If the model does NOT call a tool -> Go to 'summarize_conv'
-routing_logic = {"tools": "tools", END: "summarize_conv"}
+routing_logic = {"tools": "tools", END: "sumarize_conv"}
 
-builder.add_conditional_edges('general', tools_condition, routing_logic)
-builder.add_conditional_edges('emergency_node', tools_condition, routing_logic)
-builder.add_conditional_edges('nearby_hospitals', tools_condition, routing_logic)
-builder.add_conditional_edges('ocr', tools_condition, routing_logic)
+builder.add_conditional_edges("find_nearby_hospitals", tools_condition, routing_logic)
+builder.add_conditional_edges("oc_node", tools_condition, routing_logic)
 
+# builder.add_conditional_edges("general", tools_condition, routing_logic)
 
-
-
-# #------------------graph------------------
-# builder = StateGraph(State)
-
-# builder.add_node('refiner', refiner)
-# builder.add_node('classifier', classifier)
-# builder.add_node('general', general_query_node)
-# builder.add_node('summarize_conv', summarize_conv)
-# builder.add_node('emergency_node', emergency_query_node)
-# builder.add_node('formatter_node', formatter_node)
-# builder.add_node('nearby_hospitals', nearby_hospital_finder_node)
-# builder.add_node('ocr', ocr_node)
-# builder.add_node('memory_retriever_node', memory_retriever_node)
-# builder.add_node('tools', tool_node)
-
-# builder.set_entry_point("memory_retriever_node")
-# builder.add_edge('memory_retriever_node', 'classifier')
-
-# builder.add_conditional_edges('classifier', check_query_category)
-
-# builder.add_conditional_edges(
-#     'general',
-#     tools_condition,
-#     {"tools": "tools", END: "summarize_conv"}
-# )
-
-# builder.add_conditional_edges(
-#     'emergency_node',
-#     tools_condition,
-#     {"tools": "tools", END: "summarize_conv"}
-# )
-
-# builder.add_conditional_edges(
-#     'nearby_hospitals',
-#     tools_condition,
-#     {"tools": "tools", END: "summarize_conv"}
-# )
-
-# builder.add_conditional_edges(
-#     'ocr',
-#     tools_condition,
-#     {"tools": "tools", END: "summarize_conv"}
-# )
+builder.add_conditional_edges(
+    "tools",
+    route_after_tools,
+    {
+        "hospital_formatter": "hospital_formatter",
+        "ocr_formatter": "ocr_formatter",
+        # "general_formatter": "general_formatter",
+        # "emergency_formatter": "emergency_formatter",
+        END: END
+    }
+)
 
 
-# # builder.add_conditional_edges('classifier', check_query_category)
+# builder.add_edge("tools", "formatter_node")
 
-# # builder.add_conditional_edges('general', tools_condition)
-# # builder.add_edge("general", "summarize_conv")
+builder.add_edge("hospital_formatter", "sumarize_conv")
+builder.add_edge("ocr_formatter", "sumarize_conv")
+# builder.add_edge("general_formatter", "sumarize_conv")
 
-# # builder.add_conditional_edges('emergency_node', tools_condition)
-# # builder.add_edge("emergency_node", "summarize_conv")
+builder.add_edge("sumarize_conv", END)
+builder.add_edge("general", "sumarize_conv")  # to remove
+builder.add_edge("general", END)  # to remove
 
-# # builder.add_conditional_edges('nearby_hospitals', tools_condition)
-# # builder.add_edge("nearby_hospitals", "summarize_conv")
-# # builder.add_conditional_edges('nearby_hospitals', tools_condition, {"tools": "tools", None: "summarize_conv"})
-
-# # builder.add_conditional_edges('ocr', tools_condition)
-# # builder.add_edge("ocr", "summarize_conv")
-
-
-# builder.add_edge('tools', 'formatter_node')
-# builder.add_edge('formatter_node', 'summarize_conv')
-# builder.add_edge('summarize_conv', END)
-
-# graph = builder.compile()
 
 
 # graph = builder.compile()
 
-# config={'configurable': {'thread_id': '4'}}
+# async def main():
+#     async for chunk in graph.astream(
+#     {'question': "I have fever, headache, and body pain. What could it be?"}
+#     ):
+#      print(chunk)
+
+# asyncio.run(main())
 
 # async def fn():
-#     async with AsyncMongoDBSaver.from_conn_string(conn_string=MONGODB_URL) as checkpointer:
+#     fulltext = ""
+#     async with AsyncPostgresSaver.from_conn_string(conn_string=PostgresURL) as checkpointer:
+#         # how postgres is saving data -> to study later
+#         await checkpointer.setup()
+
 #         graph = builder.compile(checkpointer=checkpointer)
 
+#         config = {"configurable": {"thread_id": "id0", "user_id": "id0"}}
+
 #         async for chunk, metadata in graph.astream(
-#             {'question': 'what is my name?'},
+#             {"question": "hello how are you?"},
 #             config=config,
-#             stream_mode='messages'
+#             stream_mode = "messages"
 #         ):
+#             print(metadata)
 #             if isinstance(chunk, (AIMessage, AIMessageChunk)):
-#                 if metadata['langgraph_node'] == 'general':
-#                     yield(chunk.content)
+#                 node = metadata.get("langgraph_node", None) if metadata else None
+#                 if node in ["general"]:
+#                     text = chunk.content or ""
+#                     fulltext += text
+#                     yield text
 
-# # async def main(graph, config):
-# #     async for chunk, metadata in graph.astream({'query': 'what is 3 + 3?'}, config=config, stream_mode='messages'):
-# #         # print("metadata", metadata)
-# #         if isinstance(chunk, (AIMessage, AIMessageChunk)):
-# #             if metadata['langgraph_node'] == 'general':
-# #                 yield(chunk.content)
+# async def main():
+#     async for token in fn():
+#         print(token, end="", flush=True)
 
-
-# # if __name__ == "__main__":
-# #     # def
-# #     # for chunk, metadata in  graph.stream({'query': 'hi my name is jora'}, config=config, stream_mode='messages'):
-# #     #     if isinstance(chunk, (AIMessage, AIMessageChunk)):
-# #     #         print(chunk.content)
-# #     #     # pass
-# #     # fn = main(graph=graph, config=config)
-# #     for m in main(graph=graph, config=config):
-# #         print(m, end="", flush=True)
-# #         # pass
-
-# if __name__ == "__main__":
-#     async def run():
-#         async for m in main(graph=graph, config=config):
-#             print(m, end="", flush=True)
-#     asyncio.run(run())
-# if __name__ == "__main__":
-#     async def run():
-#         async for m in fn():
-#             print(m, end="", flush=True)
-#     asyncio.run(run())
-
+# asyncio.run(main())
