@@ -176,11 +176,11 @@ python-multipart==0.0.20               # for FastAPI file uploads
 aiohttp==3.11.0
 httpx==0.28.0
 requests==2.32.3
-sse-starlette==1.8.0
+# sse-starlette==1.8.0
 
 # Streamlit + extras
 # streamlit==1.42.0                      # recent stable
-twilio==9.3.3                          # if using telephony/SMS
-fuzzywuzzy==0.18.0
-python-Levenshtein==0.26.1             # speeds up fuzzywuzzy
+# twilio==9.3.3                          # if using telephony/SMS
+# fuzzywuzzy==0.18.0
+# python-Levenshtein==0.26.1             # speeds up fuzzywuzzy
 Pillow==11.1.0                         # image processing
