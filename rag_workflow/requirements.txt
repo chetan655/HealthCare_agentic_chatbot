@@ -106,39 +106,81 @@
 # langchain-openai
 # langchain-pinecone
 
-fastapi
-uvicorn
+# fastapi
+# uvicorn
 
-langgraph
-langgraph-checkpoint-postgres
+# langgraph
+# langgraph-checkpoint-postgres
 
-langchain
-langchain-core
-langchain-community
-# langchain-google-genai
-langchain-openai
-langchain-groq
-langchain-tavily
-langchain-pinecone
+# langchain
+# langchain-core
+# langchain-community
+# # langchain-google-genai
+# langchain-openai
+# langchain-groq
+# langchain-tavily
+# langchain-pinecone
 
-# google-generativeai
+# # google-generativeai
 
-pinecone
-psycopg[binary]
+# pinecone
+# psycopg[binary]
 
-pydantic
-python-dotenv
-python-multipart
+# pydantic
+# python-dotenv
+# python-multipart
 
-aiohttp
-httpx
-requests
-sse-starlette
+# aiohttp
+# httpx
+# requests
+# sse-starlette
 
-streamlit
+# streamlit
 
-twilio
+# twilio
 
-fuzzywuzzy
-python-Levenshtein
-Pillow 
+# fuzzywuzzy
+# python-Levenshtein
+# Pillow 
+
+
+# Core FastAPI / server
+fastapi==0.115.0          # or latest 0.115.x if you prefer — stable in 2026
+uvicorn==0.34.0           # reliable with FastAPI
+
+# LangChain / LangGraph family — pinned to March 2026 coherent set
+langgraph==1.0.10
+langgraph-checkpoint-postgres==2.0.0   # assume 2.x for postgres checkpointer in 2026
+langchain==0.3.28                      # or 1.2.10 if you use the monorepo style
+langchain-core==1.2.18
+langchain-community==0.3.25            # adjust to match your langchain ~0.3
+
+# LLM integrations (OpenAI, Groq, Tavily, Pinecone)
+# langchain-openai==0.3.5                # recent 0.3.x
+langchain-groq==0.2.4                  # common 2026 pin
+langchain-tavily==0.1.6                # tavily search integration
+langchain-pinecone==0.2.0              # pinecone vectorstore
+
+# Google Gemini (modern SDK path — strongly recommended over legacy)
+# langchain-google-genai==4.2.1
+# google-genai==1.66.0                   # current genai SDK March 2026
+
+# Vector DB + postgres
+pinecone==5.3.1                        # or ==5.3.* if you want patch updates
+psycopg[binary]==3.2.3                 # binary for Render (no compilation)
+
+# General utilities
+pydantic==2.10.0                       # 2.10.x is very stable
+python-dotenv==1.0.1
+python-multipart==0.0.20               # for FastAPI file uploads
+aiohttp==3.11.0
+httpx==0.28.0
+requests==2.32.3
+sse-starlette==1.8.0
+
+# Streamlit + extras
+# streamlit==1.42.0                      # recent stable
+twilio==9.3.3                          # if using telephony/SMS
+fuzzywuzzy==0.18.0
+python-Levenshtein==0.26.1             # speeds up fuzzywuzzy
+Pillow==11.1.0                         # image processing
