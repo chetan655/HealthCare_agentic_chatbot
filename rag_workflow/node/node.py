@@ -30,7 +30,7 @@ from prompts.prompt import (
 
 from models.model import (
     classifier_model,
-    flash_2_5,
+    # flash_2_5,
     groq_llm,
     groq_llm_with_tools
 )

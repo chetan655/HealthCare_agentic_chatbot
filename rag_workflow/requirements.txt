@@ -115,13 +115,13 @@ langgraph-checkpoint-postgres
 langchain
 langchain-core
 langchain-community
-langchain-google-genai
+# langchain-google-genai
 langchain-openai
 langchain-groq
 langchain-tavily
 langchain-pinecone
 
-google-generativeai
+# google-generativeai
 
 pinecone
 psycopg[binary]
