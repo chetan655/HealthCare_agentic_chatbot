@@ -146,6 +146,8 @@
 fastapi==0.115.0
 uvicorn==0.34.0
 
+requests==2.32.5
+
 # LangChain / LangGraph family — aligned to 0.3.x + langgraph 1.0.x
 langgraph==1.0.10
 langgraph-checkpoint-postgres==2.0.0
@@ -173,7 +175,8 @@ python-dotenv==1.0.1
 python-multipart==0.0.20
 aiohttp==3.11.0
 httpx==0.28.0
-requests==2.32.3
+# requests==2.32.3
+# requests==2.32.5
 # sse-starlette==1.8.0          # Uncomment if using SSE in FastAPI
 
 # Streamlit + extras (uncomment as needed)
