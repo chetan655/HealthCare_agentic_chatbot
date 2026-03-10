@@ -142,45 +142,43 @@
 # fuzzywuzzy
 # python-Levenshtein
 # Pillow 
-
-
 # Core FastAPI / server
-fastapi==0.115.0          # or latest 0.115.x if you prefer — stable in 2026
-uvicorn==0.34.0           # reliable with FastAPI
+fastapi==0.115.0
+uvicorn==0.34.0
 
-# LangChain / LangGraph family — pinned to March 2026 coherent set
+# LangChain / LangGraph family — aligned to 0.3.x + langgraph 1.0.x
 langgraph==1.0.10
-langgraph-checkpoint-postgres==2.0.0   # assume 2.x for postgres checkpointer in 2026
-langchain==0.3.28                      # or 1.2.10 if you use the monorepo style
-langchain-core==1.2.18
-langchain-community==0.3.25            # adjust to match your langchain ~0.3
+langgraph-checkpoint-postgres==2.0.0
+langchain==0.3.28
+langchain-core==0.3.76          # Required minimum for langchain 0.3.28; use this exact or latest 0.3.x patch
+langchain-community==0.3.29     # Minor bump for better stability/compatibility
 
 # LLM integrations (OpenAI, Groq, Tavily, Pinecone)
-# langchain-openai==0.3.5                # recent 0.3.x
-langchain-groq==0.2.4                  # common 2026 pin
-langchain-tavily==0.1.6                # tavily search integration
-langchain-pinecone==0.2.0              # pinecone vectorstore
+# langchain-openai==0.3.5       # Uncomment & use if needed — compatible
+langchain-groq==0.2.4
+langchain-tavily==0.1.6
+langchain-pinecone==0.2.13      # Corrected — latest working version (Nov 2025 release)
 
-# Google Gemini (modern SDK path — strongly recommended over legacy)
-# langchain-google-genai==4.2.1
-# google-genai==1.66.0                   # current genai SDK March 2026
+# Google Gemini (modern SDK — uncomment if using Gemini)
+# langchain-google-genai==4.2.1   # Latest Feb 2026 release
+# google-genai==1.66.0            # Matches the SDK used in langchain-google-genai 4.x
 
 # Vector DB + postgres
-pinecone==5.3.1                        # or ==5.3.* if you want patch updates
-psycopg[binary]==3.2.3                 # binary for Render (no compilation)
+pinecone==5.3.1                 # Stable; or use pinecone-client if you prefer older style
+psycopg[binary]==3.2.3
 
 # General utilities
-pydantic==2.10.0                       # 2.10.x is very stable
+pydantic==2.10.0
 python-dotenv==1.0.1
-python-multipart==0.0.20               # for FastAPI file uploads
+python-multipart==0.0.20
 aiohttp==3.11.0
 httpx==0.28.0
 requests==2.32.3
-# sse-starlette==1.8.0
+# sse-starlette==1.8.0          # Uncomment if using SSE in FastAPI
 
-# Streamlit + extras
-# streamlit==1.42.0                      # recent stable
-# twilio==9.3.3                          # if using telephony/SMS
+# Streamlit + extras (uncomment as needed)
+# streamlit==1.42.0
+# twilio==9.3.3
 # fuzzywuzzy==0.18.0
-# python-Levenshtein==0.26.1             # speeds up fuzzywuzzy
-Pillow==11.1.0                         # image processing
+# python-Levenshtein==0.26.1
+Pillow==11.1.0
