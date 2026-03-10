@@ -143,46 +143,34 @@
 # python-Levenshtein
 # Pillow 
 # Core FastAPI / server
+
+
 fastapi==0.115.0
 uvicorn==0.34.0
 
 requests==2.32.5
 
-# LangChain / LangGraph family — aligned to 0.3.x + langgraph 1.0.x
+# LangChain / LangGraph
 langgraph==1.0.10
 langgraph-checkpoint-postgres==2.0.0
 langchain==0.3.28
-langchain-core==0.3.76          # Required minimum for langchain 0.3.28; use this exact or latest 0.3.x patch
-langchain-community==0.3.29     # Minor bump for better stability/compatibility
+langchain-community==0.3.29
 
-# LLM integrations (OpenAI, Groq, Tavily, Pinecone)
-# langchain-openai==0.3.5       # Uncomment & use if needed — compatible
+# LLM integrations
 langchain-groq==0.2.4
 langchain-tavily==0.1.6
-# langchain-pinecone==0.2.13      # Corrected — latest working version (Nov 2025 release)
+
+# Async / networking
 aiohttp>=3.11.0,<4.0.0
-langchain-tavily>=0.1.6
-# Google Gemini (modern SDK — uncomment if using Gemini)
-# langchain-google-genai==4.2.1   # Latest Feb 2026 release
-# google-genai==1.66.0            # Matches the SDK used in langchain-google-genai 4.x
+httpx==0.28.0
 
 # Vector DB + postgres
-pinecone==5.3.1                 # Stable; or use pinecone-client if you prefer older style
+pinecone==5.3.1
 psycopg[binary]==3.2.3
 
-# General utilities
+# Utilities
 pydantic==2.10.0
 python-dotenv==1.0.1
 python-multipart==0.0.20
-# aiohttp==3.11.0
-httpx==0.28.0
-# requests==2.32.3
-# requests==2.32.5
-# sse-starlette==1.8.0          # Uncomment if using SSE in FastAPI
 
-# Streamlit + extras (uncomment as needed)
-# streamlit==1.42.0
-# twilio==9.3.3
-# fuzzywuzzy==0.18.0
-# python-Levenshtein==0.26.1
 Pillow==11.1.0
