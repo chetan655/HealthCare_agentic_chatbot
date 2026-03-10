@@ -1,170 +1,18 @@
-# # fastapi
-# # uvicorn
+fastapi==0.117.1
+uvicorn[standard]==0.35.0
 
+langchain==0.3.26
+langchain-community==0.3.26
+langgraph==0.6.5
 
-# # # langgraph
-# # # langchain
-# # # langchain-core
+langchain-groq==0.3.8
+langchain-tavily==0.2.11
 
-# # # langchain-google-genai
-# # # langchain-huggingface
-# langchain-groq
-# langchain-tavily
+psycopg[binary]==3.2.10
 
-# # # langgraph-checkpoint-mongodb
+aiohttp==3.12.13
+httpx==0.28.1
 
-# pydantic
-
-# python-dotenv
-
-# aiohttp
-
-# langchain-pinecone
-# google-generativeai
-
-# fuzzywuzzy
-# python-Levenshtein
-
-# Pillow
-# # # pandas
-
-
-# # # -----------------------
-# # # FastAPI + Server
-# # # -----------------------
-# # # -----------------------
-# # # FastAPI + Server
-# # # -----------------------
-
-# # # -----------------------
-# # # FastAPI + Server
-# # # -----------------------
-# # fastapi==0.117.1
-# # uvicorn==0.35.0
-# # aiohttp==3.12.13
-# # python-dotenv==1.1.1
-# # pydantic==2.11.7
-
-# twilio
-# requests
-
-# # # -----------------------
-# # # LangChain Ecosystem
-# # # -----------------------
-# # langchain==0.3.26
-# # langchain-core==0.3.76
-# # langchain-google-genai==2.0.10
-# # langchain-huggingface==0.3.0
-# # langchain-groq==0.3.8
-# # langchain-tavily==0.2.11
-# # langchain-pinecone==0.2.13
-
-# # # -----------------------
-# # # LangGraph
-# # # -----------------------
-# # langgraph==0.6.5
-# # langgraph-checkpoint-mongodb==0.2.1
-
-# # # -----------------------
-# # # Vector DB
-# # # -----------------------
-# pinecone
-
-# # # -----------------------
-# # # Google GenAI
-# # # -----------------------
-# # google-generativeai==0.8.5
-
-# # # -----------------------
-# # # Utilities
-# # # -----------------------
-# # fuzzywuzzy==0.18.0
-# # python-Levenshtein==0.27.3
-# # Pillow==11.0.0
-# # pandas==2.3.0
-
-# # python-multipart==0.0.9
-
-# fastapi
-# uvicorn
-# langgraph
-# langgraph-checkpoint-postgres
-# langchain-core
-# pinecone
-# psycopg[binary]
-# python-dotenv
-# python-multipart
-# sse-starlette
-# aiohttp
-# httpx
-# pydantic
-# streamlit
-
-# langchain
-# langchain-community
-# langchain-google-genai
-# langchain-openai
-# langchain-pinecone
-
-# fastapi
-# uvicorn
-
-# langgraph
-# langgraph-checkpoint-postgres
-
-# langchain
-# langchain-core
-# langchain-community
-# # langchain-google-genai
-# langchain-openai
-# langchain-groq
-# langchain-tavily
-# langchain-pinecone
-
-# # google-generativeai
-
-# pinecone
-# psycopg[binary]
-
-# pydantic
-# python-dotenv
-# python-multipart
-
-# aiohttp
-# httpx
-# requests
-# sse-starlette
-
-# streamlit
-
-# twilio
-
-# fuzzywuzzy
-# python-Levenshtein
-# Pillow 
-# Core FastAPI / server
-
-fastapi==0.115.0
-uvicorn==0.34.0
-requests==2.32.5
-
-langgraph==1.0.10
-langgraph-prebuilt==0.1.8
-langgraph-checkpoint-postgres==2.0.0
-
-langchain==0.3.28
-langchain-community==0.3.29
-
-langchain-groq==0.2.4
-langchain-tavily==0.1.6
-
-aiohttp>=3.11.0,<4.0.0
-httpx==0.28.0
-
-pinecone==5.3.1
-psycopg[binary]==3.2.3
-
-pydantic==2.10.0
-python-dotenv==1.0.1
-python-multipart==0.0.20
-Pillow==11.1.0
+pydantic==2.11.7
+python-dotenv==1.1.1
+pillow==11.0.0
