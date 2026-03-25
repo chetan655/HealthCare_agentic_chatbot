@@ -66,31 +66,56 @@ from services.pinecone_service import PineconeService
 #     # await app.state.checkpointer.close()
 #     print("Application shutdown.")
 
+from contextlib import asynccontextmanager
+from psycopg_pool import AsyncConnectionPool
+from psycopg.rows import dict_row
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Your other services
     app.state.file_service = FileService(upload_path=Path("temp"))
     app.state.embedding_service = EmbeddingService()
     app.state.pinecone_service = PineconeService()
 
-    async with AsyncPostgresSaver.from_conn_string(
-        conn_string=PostgresURL
-    ) as checkpointer:
+    if not PostgresURL:
+        raise ValueError("PostgresURL is not set! Check your environment variables or config.")
 
-        # ✅ run only once
-        if not hasattr(app.state, "checkpointer_initialized"):
+    # Create a proper pool with the fix for DuplicatePreparedStatement
+    pool = AsyncConnectionPool(
+        conninfo=PostgresURL,
+        min_size=2,
+        max_size=15,
+        kwargs={
+            "autocommit": True,
+            "row_factory": dict_row,
+            "prepare_threshold": None,  # ← CRITICAL FIX: Must be None, not 0
+        },
+    )
+
+    # Start the pool context
+    async with pool:
+        checkpointer = AsyncPostgresSaver(pool)
+
+        # Setup the checkpointer tables
+        # Since we fixed prepare_threshold, the DuplicatePreparedStatement try/except 
+        # workaround is no longer strictly necessary, but setup() is safe to call repeatedly.
+        if not getattr(app.state, "checkpointer_initialized", False):
             await checkpointer.setup()
+            print("✅ Checkpoint tables created / verified")
             app.state.checkpointer_initialized = True
 
         app.state.checkpointer = checkpointer
+        
+        # Compile the LangGraph builder
+        app.state.graph = builder.compile(checkpointer=app.state.checkpointer)
 
-        app.state.graph = builder.compile(
-            checkpointer=app.state.checkpointer
-        )
-
-        print("Application startup completed.")
+        print("✅ Application startup completed successfully.")
+        
+        # Yield control back to FastAPI
         yield
 
-    print("Application shutdown.")
+    print("Application shutdown. Connection pool closed.")
 
 app = FastAPI(lifespan=lifespan)
 
