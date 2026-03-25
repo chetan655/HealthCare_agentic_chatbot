@@ -43,6 +43,29 @@ from services.embedding_service import EmbeddingService
 from services.file_service import FileService
 from services.pinecone_service import PineconeService
 
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     app.state.file_service = FileService(upload_path=Path("temp"))
+#     app.state.embedding_service = EmbeddingService()
+#     app.state.pinecone_service = PineconeService()
+
+#     async with AsyncPostgresSaver.from_conn_string(
+#         conn_string=PostgresURL
+#     ) as checkpointer:
+
+#         await checkpointer.setup()
+#         app.state.checkpointer = checkpointer
+
+#         app.state.graph = builder.compile(
+#             checkpointer=app.state.checkpointer
+#         )
+
+#         print("Application startup completed.")
+#         yield
+
+#     # await app.state.checkpointer.close()
+#     print("Application shutdown.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.file_service = FileService(upload_path=Path("temp"))
@@ -53,7 +76,11 @@ async def lifespan(app: FastAPI):
         conn_string=PostgresURL
     ) as checkpointer:
 
-        await checkpointer.setup()
+        # ✅ run only once
+        if not hasattr(app.state, "checkpointer_initialized"):
+            await checkpointer.setup()
+            app.state.checkpointer_initialized = True
+
         app.state.checkpointer = checkpointer
 
         app.state.graph = builder.compile(
@@ -63,7 +90,6 @@ async def lifespan(app: FastAPI):
         print("Application startup completed.")
         yield
 
-    # await app.state.checkpointer.close()
     print("Application shutdown.")
 
 app = FastAPI(lifespan=lifespan)
