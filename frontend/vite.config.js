@@ -20,7 +20,14 @@
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-fetch(`${API_URL}/chat`, {
+const BASE_URL = import.meta.env.DEV
+  ? "/chat" // uses Vite proxy in dev (if you add it back)
+  : API_URL;
+
+fetch(`${BASE_URL}/chat`, {
   method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
   body: JSON.stringify(data),
 });
