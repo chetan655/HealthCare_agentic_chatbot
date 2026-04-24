@@ -2,9 +2,6 @@ import os
 import asyncio
 
 from typing import Annotated, Optional
-# optional is union of a value and none -> meaning either value will be something or none
-# annotated helps to add extra data to the type
-# framework and library use the extra metadata data
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages

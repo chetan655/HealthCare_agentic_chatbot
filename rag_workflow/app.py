@@ -73,7 +73,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Your other services
+
     app.state.file_service = FileService(upload_path=Path("temp"))
     app.state.embedding_service = EmbeddingService()
     app.state.pinecone_service = PineconeService()
@@ -81,7 +81,6 @@ async def lifespan(app: FastAPI):
     if not PostgresURL:
         raise ValueError("PostgresURL is not set! Check your environment variables or config.")
 
-    # Create a proper pool with the fix for DuplicatePreparedStatement
     pool = AsyncConnectionPool(
         conninfo=PostgresURL,
         min_size=2,
@@ -89,7 +88,8 @@ async def lifespan(app: FastAPI):
         kwargs={
             "autocommit": True,
             "row_factory": dict_row,
-            "prepare_threshold": None,  # ← CRITICAL FIX: Must be None, not 0
+            "prepare_threshold": None, 
+            "prepare_threshold": None, 
         },
     )
 
@@ -97,22 +97,17 @@ async def lifespan(app: FastAPI):
     async with pool:
         checkpointer = AsyncPostgresSaver(pool)
 
-        # Setup the checkpointer tables
-        # Since we fixed prepare_threshold, the DuplicatePreparedStatement try/except 
-        # workaround is no longer strictly necessary, but setup() is safe to call repeatedly.
         if not getattr(app.state, "checkpointer_initialized", False):
             await checkpointer.setup()
-            print("✅ Checkpoint tables created / verified")
+            print("Checkpoint tables created / verified")
             app.state.checkpointer_initialized = True
 
         app.state.checkpointer = checkpointer
-        
-        # Compile the LangGraph builder
+
         app.state.graph = builder.compile(checkpointer=app.state.checkpointer)
 
-        print("✅ Application startup completed successfully.")
+        print("Application startup completed successfully.")
         
-        # Yield control back to FastAPI
         yield
 
     print("Application shutdown. Connection pool closed.")
