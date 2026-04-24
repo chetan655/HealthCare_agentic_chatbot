@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #2563eb;
+  --color-brand-light: #3b82f6;
+  --color-brand-dark: #1d4ed8;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-surface: #f8fafc;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.35s ease-out both;
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-brand);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.prose-medical h1,
+.prose-medical h2,
+.prose-medical h3 {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.prose-medical h1 { font-size: 1.25rem; }
+.prose-medical h2 { font-size: 1.125rem; }
+.prose-medical h3 { font-size: 1rem; }
+
+.prose-medical p {
+  margin-bottom: 0.75em;
+  line-height: 1.7;
+}
+
+.prose-medical ul,
+.prose-medical ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.prose-medical li {
+  margin-bottom: 0.35em;
+  line-height: 1.6;
+}
+
+.prose-medical strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.prose-medical code {
+  background: var(--color-surface-alt);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+.prose-medical blockquote {
+  border-left: 3px solid var(--color-brand);
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: var(--color-text-secondary);
+}
