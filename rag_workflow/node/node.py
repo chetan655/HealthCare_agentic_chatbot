@@ -14,6 +14,8 @@ from langchain_core.messages import HumanMessage, AIMessage, RemoveMessage
 from langchain_core.runnables import Runnable
 
 from schema.schema import State
+from services.embedding_service import LocalEmbeddingService
+from services.pinecone_service import PineconeService
 
 
 from prompts.prompt import (
@@ -438,3 +440,59 @@ async def sumarize_conv(state: State) -> State:
     remaining_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]]
 
     return {"summary": res.content, "messages": remaining_messages}
+
+
+################ memory ##################3
+
+_pinecone_service : PineconeService | None = None
+_embedding_service: LocalEmbeddingService | None = None
+_pinecone_index = None
+
+
+def memory(state: State) -> State:
+
+
+    question = state.get("question")
+    namespace = "__default__"  # to remove
+
+    if _embedding_service is None:
+        global _embedding_service
+        _embedding_service = LocalEmbeddingService()
+
+    if _pinecone_service is None:
+        global _pinecone_service
+        _pinecone_service = PineconeService()
+
+    if not question:
+        pass # to handle later
+
+    query_vector = _embedding_service.get_embedding(question)
+
+    if not _pinecone_index:
+        global _pinecone_index
+        _pinecone_index = _pinecone_service.get_index()
+
+    pinecone_result = _pinecone_index.query(
+        vector=query_vector,
+        top_k=5,
+        namespace=namespace,
+        include_metadata=True
+    )
+
+    res_messages = []
+
+    for match in pinecone_result["matches"]:
+        meta = match["metadata"]
+
+        text = meta.get("page_content", "")
+        role = meta.get("role", "user")
+
+        if role == "user":
+            res_messages.append(HumanMessage(content=text))
+        if role == "ai":
+            res_messages.append(AIMessage(content=text))
+
+    return {"memory_docs": res_messages}
+
+    
+    
