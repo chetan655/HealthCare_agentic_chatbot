@@ -39,7 +39,7 @@ except Exception as e:
 
 
 ########### init ##############
-from services.embedding_service import EmbeddingService
+from services.embedding_service import LocalEmbeddingService
 from services.file_service import FileService
 from services.pinecone_service import PineconeService
 
@@ -75,7 +75,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 async def lifespan(app: FastAPI):
 
     app.state.file_service = FileService(upload_path=Path("temp"))
-    app.state.embedding_service = EmbeddingService()
+    app.state.embedding_service = LocalEmbeddingService()
     app.state.pinecone_service = PineconeService()
 
     if not PostgresURL:
@@ -187,36 +187,42 @@ async def chat(
             # get embedding
             # embedding = embedding_service.get_embedding(response)
             # print("this is embedding: ", len(embedding))
-            # save to vector db
-            # if response.strip():
-            #     try:
-            #         q_vec = embedding_service.get_embedding(question)
-            #         if q_vec:
-            #             pinecone_service.upsert(
-            #                 str(uuid.uuid4()), q_vec,
-            #                 {
-            #                     "user_id": "12345",
-            #                     "thread_id": thread_id,
-            #                     "role": "user",
-            #                     "timestamp": int(time.time() * 1000),
-            #                     "page_content": question
-            #                 }
-            #             )
+            # save to vector db  
+            user_id = "12345"   # to remove
+            if response.strip():
+                try:
+                    q_vec = embedding_service.get_embedding(question)
+                    if q_vec:
+                        pinecone_service.upsert(
+                            str(uuid.uuid4()), q_vec,
+                            {
+                                "user_id": user_id,
+                                "thread_id": thread_id,
+                                "role": "user",
+                                "timestamp": int(time.time() * 1000),
+                                "page_content": question
+                            },
+                            namespace=f"user_{user_id}"
+                        )
+                        print("question upserted")
 
-            #         ai_vec = embedding_service.get_embedding(response)
-            #         if ai_vec:
-            #             pinecone_service.upsert(
-            #                 str(uuid.uuid4()), ai_vec,
-            #                 {
-            #                     "user_id": "12345",
-            #                     "thread_id": thread_id,
-            #                     "role": "ai",
-            #                     "timestamp": int(time.time() * 1000),
-            #                     "page_content": response
-            #                 }
-            #             )
-            #     except Exception as e:
-            #         print(f"Post-porcessing pinecone error: {e}")
+                    ai_vec = embedding_service.get_embedding(response)
+                    if ai_vec:
+                        pinecone_service.upsert(
+                            str(uuid.uuid4()), ai_vec,
+                            {
+                                "user_id": user_id,
+                                "thread_id": thread_id,
+                                "role": "ai",
+                                "timestamp": int(time.time() * 1000),
+                                "page_content": response
+                            },
+                            namespace=f"user_{user_id}"
+                        )
+                        print("response unserted")
+                except Exception as e:
+                    print(f"Post-porcessing pinecone error: {e}")
+                    raise Exception(f"error: {e}")
 
         
     return StreamingResponse(response_generator())

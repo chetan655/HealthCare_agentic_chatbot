@@ -4,6 +4,7 @@ from typing import Annotated, Optional, TypedDict, Literal, List
 # literal means This variable can only be one of these exact values.
 
 from langchain_core.documents import Document
+from langchain_core.messages import AnyMessage
 # Document store a piece of text and metadata associated with it.
 
 from pydantic import BaseModel, Field
@@ -16,7 +17,7 @@ class State(MessagesState):
     question: str
     category: str
     image: str
-    memory_docs: List[Document]
+    memory_docs: List[AnyMessage]
     lat: Optional[str]
     long: Optional[str]
     summary: Optional[str]
