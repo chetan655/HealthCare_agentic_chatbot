@@ -27,7 +27,7 @@ class PineconeService:
             if self.index_name not in existing_index:
                 self.pc.create_index(
                     name=self.index_name,
-                    dimension=768,
+                    dimension=384,
                     metric="cosine",
                     spec={"serverless": {"cloud": "aws", "region": "us-east-1"}}
                 )
@@ -36,7 +36,7 @@ class PineconeService:
             self.index = self.pc.Index(self.index_name)
             self.pinecone_initialized = True
         except Exception as e:
-            raise Exception("Pinecone init error: ")
+            raise Exception(f"Pinecone init error: {str(e)}")
         
     def get_index(self):
         if not self.pinecone_initialized:
@@ -64,3 +64,20 @@ class PineconeService:
             )
         except Exception as e:
             raise Exception("Pinecone upsert error: ",e)
+        
+    def retrieve(self, query, embedding_model, namespace: str | None = "__default__"):
+        if not query:
+            return None
+        
+        query_vector = embedding_model.get_embedding(query)
+
+        res = self.index.query(
+            vector=query_vector,
+            top_k=5,
+            namespace=namespace,
+            include_metadata=True
+        )
+        if res:
+            meta = [obj.metadata for obj in res]
+
+        return meta

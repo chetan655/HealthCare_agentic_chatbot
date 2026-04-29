@@ -34,7 +34,8 @@ from node.node import (
     hospital_formatter,
     oc_node,
     ocr_formatter,
-    sumarize_conv
+    sumarize_conv,
+    memory
 )
 
 from models.model import tool_node
@@ -43,6 +44,7 @@ from models.model import tool_node
 builder = StateGraph(State)
 
 builder.add_node("classifier", classifier)
+builder.add_node("memory", memory)
 builder.add_node("general", general)
 builder.add_node("general_formatter", general_formatter)
 builder.add_node("find_nearby_hospitals", find_nearby_hospitals)
@@ -54,8 +56,9 @@ builder.add_node("sumarize_conv", sumarize_conv)
 builder.add_node("tools", tool_node)
 
 builder.add_edge(START, "classifier")
+builder.add_edge("classifier", "memory")
 builder.add_conditional_edges(
-    "classifier",
+    "memory",
     check_query_category,
     {
         "general": "general",

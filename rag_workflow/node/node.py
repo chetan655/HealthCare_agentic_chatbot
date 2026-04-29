@@ -449,28 +449,42 @@ _embedding_service: LocalEmbeddingService | None = None
 _pinecone_index = None
 
 
-def memory(state: State) -> State:
+async def memory(state: State) -> State:
+    global _embedding_service, _pinecone_service, _pinecone_index
+
+    print("memory node active.")
 
 
     question = state.get("question")
-    namespace = "__default__"  # to remove
+    namespace = "user_12345"  # to remove
 
     if _embedding_service is None:
-        global _embedding_service
+        # global _embedding_service
         _embedding_service = LocalEmbeddingService()
+        # print("getting embedding service")
+    # else:
+        # print("embedding service already active")
 
     if _pinecone_service is None:
-        global _pinecone_service
+        # global _pinecone_service
         _pinecone_service = PineconeService()
+        # print("getting pinecone service")
+    # else:
+        # print("pinecone service already active")
+
 
     if not question:
         pass # to handle later
 
     query_vector = _embedding_service.get_embedding(question)
+    # print("converted to vector", query_vector[:5])
 
     if not _pinecone_index:
-        global _pinecone_index
+        # global _pinecone_index
         _pinecone_index = _pinecone_service.get_index()
+        # print("getting pinecone index")
+    # else:
+    #     print("pinecone index already exists")
 
     pinecone_result = _pinecone_index.query(
         vector=query_vector,
@@ -491,6 +505,8 @@ def memory(state: State) -> State:
             res_messages.append(HumanMessage(content=text))
         if role == "ai":
             res_messages.append(AIMessage(content=text))
+
+    # print(f"this is result of memory: {res_messages}")
 
     return {"memory_docs": res_messages}
 
