@@ -70,8 +70,8 @@ from rag_workflow.services.pinecone_service import PineconeService
 #     print("Application shutdown.")
 
 from contextlib import asynccontextmanager
-from psycopg_pool import AsyncConnectionPool
-from psycopg.rows import dict_row
+# from psycopg_pool import AsyncConnectionPool
+# from psycopg.rows import dict_row
 # from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "checkpointer.db")
