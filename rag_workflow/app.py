@@ -1,6 +1,7 @@
 
 from fastapi import FastAPI, Form, File, UploadFile, Request
 from fastapi.responses import StreamingResponse
+from fastapi import HTTPException
 
 import os
 import time
@@ -17,6 +18,7 @@ from contextlib import asynccontextmanager
 # from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.messages import HumanMessage
 
 from pinecone import Pinecone
 
@@ -86,7 +88,7 @@ async def lifespan(app: FastAPI):
     async with AsyncSqliteSaver.from_conn_string(SQLITE_DB_PATH) as checkpointer:
         await checkpointer.setup()
         print("sqlite checkpointer setup complted.")
-        
+
         app.state.checkpointer = checkpointer
         app.state.graph = builder.compile(checkpointer=checkpointer)
 
@@ -108,6 +110,55 @@ async def home():
 #     lat: Annotated[float, Form()]
 #     long: Annotated[float, Form()]
 #     image: Annotated[UploadFile, File()]
+
+
+@app.get("/chat/history")
+async def get_chat_history(
+    request: Request,
+    thread_id: str,
+    limit: int = 50
+):
+    checkpointer = request.app.state.checkpointer
+    
+    if not checkpointer:
+        print("checkpointer not found.")
+        raise HTTPException(status_code=500, detail="Checkpointer not initialized")
+
+    try:
+        checkpointer = await checkpointer.aget(
+            {"configurable": {"thread_id": thread_id}}
+        )
+
+        if not checkpointer or "channel_values" not in checkpointer:
+            return {
+                "thread_id": thread_id,
+                "messages": [],
+                "message": "No history found for this thread."
+            }
+        
+        state = checkpointer["channel_values"]
+        messages = state.get("messages", [])
+
+        history = []
+        for msg in messages[-limit:]:
+            if hasattr(msg, "content"):
+                history.append(
+                    {
+                        "role": "user" if isinstance(msg, HumanMessage) else "assistant",
+                        "content": msg.content,
+                    }
+                )
+
+        return {
+            "thread_id": thread_id,
+            "total_messages": len(messages),
+            "returned": len(history),
+            "messages": history
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}") 
+    
 
 @app.post("/chat")
 async def chat(
