@@ -8,8 +8,11 @@ import time
 import uuid
 from pathlib import Path
 from typing import Annotated
+from passlib.context import CryptContext
+from datetime import datetime
+import secrets
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -27,18 +30,21 @@ from rag_workflow.main import builder
 
 from dotenv import load_dotenv
 
+# After imports
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 ########### load dotenv ################
 try:
     load_dotenv()
 except Exception as e:
     raise Exception("Failed to load .env", e)
 
-# print("this is apikey: ", os.getenv("GOOGLE_API_KEY"))
+# # print("this is apikey: ", os.getenv("GOOGLE_API_KEY"))
 
-try:
-    PostgresURL = os.getenv("PostgresURL")
-except Exception as e:
-    raise Exception("PostgresURL not found.")
+# try:
+#     PostgresURL = os.getenv("PostgresURL")
+# except Exception as e:
+#     raise Exception("PostgresURL not found.")
 
 
 ########### init ##############
@@ -76,6 +82,24 @@ from contextlib import asynccontextmanager
 
 SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "checkpointer.db")
 
+
+######## models
+class UserSignUp(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    user_id: str
+    email: str
+    full_name: str
+    access_token: str
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
@@ -88,6 +112,32 @@ async def lifespan(app: FastAPI):
     async with AsyncSqliteSaver.from_conn_string(SQLITE_DB_PATH) as checkpointer:
         await checkpointer.setup()
         print("sqlite checkpointer setup complted.")
+        # async with checkpointer._get_conn() as conn:
+        #     await conn.execute("""
+        #         create table if not exists users (
+        #                        if integer primary key autoincrement,
+        #                        usere_id text unique not null,
+        #                        email text unique not null,
+        #                        hashed_password text not null,
+        #                        full_name text,
+        #                        created_at timestamp default current_timestamp)
+        #         """)
+        #     print("users table ready")
+        import sqlite3
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                hashed_password TEXT NOT NULL,
+                full_name TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        conn.close()
+        print("Users table is ready")
 
         app.state.checkpointer = checkpointer
         app.state.graph = builder.compile(checkpointer=checkpointer)
@@ -110,6 +160,61 @@ async def home():
 #     lat: Annotated[float, Form()]
 #     long: Annotated[float, Form()]
 #     image: Annotated[UploadFile, File()]
+
+@app.post("/auth/signup")
+async def signup(request: Request, user: UserSignUp):
+    import sqlite3
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    # checkpointer = request.app.state.checkpointer
+
+    try:
+        result = conn.execute(
+            "select user_id from users where email = ?", (user.email,)
+        )
+        if result.fetchone():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        user_id = f"user_{secrets.token_hex(8)}"
+        hashed_password = pwd_context.hash(user.password)
+
+        conn.execute("""
+                insert into users (user_id, email, hashed_password, full_name) values (?, ?, ?, ?)""", (user_id, user.email, hashed_password, user.full_name))
+        conn.commit()
+        
+        return {
+            "message": "user created successfully",
+            "user_id": user_id,
+            "email": user.email
+        }
+    finally:
+        conn.close()
+    
+@app.post("/auth/login")
+async def login(request: Request, user: UserLogin):
+    import sqlite3
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    # checkpointer = request.app.state.checkpointer
+
+    try:
+        result = conn.execute(
+            "select user_id, email, full_name, hashed_password from users where email = ?", (user.email,)
+        )
+        db_user = result.fetchone()
+
+        if not db_user or not pwd_context.verify(user.password, db_user["hashed_password"]):
+            raise HTTPException(status_code=401, detail="Incorrect email or password")
+        
+        access_token = secrets.token_hex(32)
+
+        return {
+            "user_id": db_user["user_id"],
+            "email": db_user["email"],
+            "full_name": db_user["full_name"],
+            "access_token": access_token
+        }
+    finally:
+        conn.close()
 
 
 @app.get("/chat/history")
@@ -159,7 +264,7 @@ async def get_chat_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}") 
     
-@app.get("/chat/user/history")
+@app.get("/chat/user/threads")
 async def get_user_threads(
     request: Request,
     user_id: str,
@@ -167,48 +272,28 @@ async def get_user_threads(
 ):
     checkpointer = request.app.state.checkpointer
     if not checkpointer:
-        raise HTTPException(status_code=500, detail="checkpointer not init")
-    
+        raise HTTPException(status_code=500, detail="Checkpointer not initialized")
+
     try:
         threads = []
+        
+        # Correct way using public API
+        async for checkpoint_tuple in checkpointer.alist(limit=limit * 3):
+            thread_id = checkpoint_tuple.config["configurable"]["thread_id"]
 
-        async with checkpointer._get_conn() as conn:
-            result = await conn.execute(
-                """
-                select thread_id, checkpoint
-                from checkpoints
-                order by thread_id desc
-                limit ?                
-                """,
-                (limit * 3,)
-            )
-            rows = await result.fetchall()
-
-        for row in rows:
-            thread_id = row["thread_d"]
-            
             if user_id not in thread_id and user_id.lower() != "all":
                 continue
 
-            checkpoint = await checkpointer.aget(
-                {"configurable": {"thread_id": thread_id}}
-            )
-            if not checkpoint or "channel_values" not in checkpoint:
-                continue
-
-            state = checkpoint["channel_values"]
+            state = checkpoint_tuple.checkpoint.get("channel_values", {})
             messages = state.get("messages", [])
-            
+
             if not messages:
                 continue
 
-            first_user_msg = next((msg.content for msg in messages if isinstance(msg, HumanMessage)), None)
-
-            title = "new conversation"
-            if first_user_msg:
-                title = first_user_msg.strip()[:60]
-                if len(first_user_msg) > 60:
-                    title += "..."
+            first_user_msg = next((msg.content for msg in messages if isinstance(msg, HumanMessage)), "New Conversation")
+            title = first_user_msg.strip()[:60]
+            if len(first_user_msg) > 60:
+                title += "..."
 
             threads.append({
                 "thread_id": thread_id,
@@ -221,10 +306,8 @@ async def get_user_threads(
             "total_threads": len(threads),
             "threads": threads
         }
-    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch user history: {str(e)}")
-
+        raise HTTPException(status_code=500, detail=f"Error fetching threads: {str(e)}")
     
 
 @app.post("/chat")
@@ -236,6 +319,7 @@ async def chat(
     # lat: str = "29.9478",
     # long: str = "76.8170",
     thread_id: Annotated[str, Form()],
+    user_id: Annotated[str, Form()],
     lat: Annotated[str, Form()], #= "29.9478",
     long: Annotated[str, Form()], #= "76.8170"
     image: Annotated[UploadFile | None, File()] = None,
@@ -290,7 +374,7 @@ async def chat(
             # embedding = embedding_service.get_embedding(response)
             # print("this is embedding: ", len(embedding))
             # save to vector db  
-            user_id = "12345"   # to remove
+            # user_id = None   # to remove
             if response.strip():
                 try:
                     q_vec = embedding_service.get_embedding(question)
