@@ -14,7 +14,8 @@ from typing import Optional
 from contextlib import asynccontextmanager
 
 # from langgraph.checkpoint.mongodb import AsyncMongoDBSaver
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+# from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langchain_core.messages import AIMessage, AIMessageChunk
 
 from pinecone import Pinecone
@@ -69,7 +70,9 @@ from rag_workflow.services.pinecone_service import PineconeService
 from contextlib import asynccontextmanager
 from psycopg_pool import AsyncConnectionPool
 from psycopg.rows import dict_row
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+# from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "checkpointer.db")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,39 +81,20 @@ async def lifespan(app: FastAPI):
     app.state.embedding_service = LocalEmbeddingService()
     app.state.pinecone_service = PineconeService()
 
-    if not PostgresURL:
-        raise ValueError("PostgresURL is not set! Check your environment variables or config.")
+    # checkpointer = AsyncSqliteSaver.from_conn_string(SQLITE_DB_PATH)
 
-    pool = AsyncConnectionPool(
-        conninfo=PostgresURL,
-        min_size=2,
-        max_size=15,
-        kwargs={  # these kwargs defines how connection with pg behaves.
-            "autocommit": True,
-            "row_factory": dict_row,
-            "prepare_threshold": None, 
-            "prepare_threshold": None, 
-        },
-    )
-
-    # Start the pool context
-    async with pool:
-        checkpointer = AsyncPostgresSaver(pool)
-
-        if not getattr(app.state, "checkpointer_initialized", False):
-            await checkpointer.setup()
-            print("Checkpoint tables created / verified")
-            app.state.checkpointer_initialized = True
-
-        app.state.checkpointer = checkpointer
-
-        app.state.graph = builder.compile(checkpointer=app.state.checkpointer)
-
-        print("Application startup completed successfully.")
+    async with AsyncSqliteSaver.from_conn_string(SQLITE_DB_PATH) as checkpointer:
+        await checkpointer.setup()
+        print("sqlite checkpointer setup complted.")
         
+        app.state.checkpointer = checkpointer
+        app.state.graph = builder.compile(checkpointer=checkpointer)
+
+        print("application startup completed.")
+
         yield
 
-    print("Application shutdown. Connection pool closed.")
+    print("application shutdown completed.")
 
 app = FastAPI(lifespan=lifespan)
 
