@@ -159,6 +159,73 @@ async def get_chat_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}") 
     
+@app.get("/chat/user/history")
+async def get_user_threads(
+    request: Request,
+    user_id: str,
+    limit: int = 30
+):
+    checkpointer = request.app.state.checkpointer
+    if not checkpointer:
+        raise HTTPException(status_code=500, detail="checkpointer not init")
+    
+    try:
+        threads = []
+
+        async with checkpointer._get_conn() as conn:
+            result = await conn.execute(
+                """
+                select thread_id, checkpoint
+                from checkpoints
+                order by thread_id desc
+                limit ?                
+                """,
+                (limit * 3,)
+            )
+            rows = await result.fetchall()
+
+        for row in rows:
+            thread_id = row["thread_d"]
+            
+            if user_id not in thread_id and user_id.lower() != "all":
+                continue
+
+            checkpoint = await checkpointer.aget(
+                {"configurable": {"thread_id": thread_id}}
+            )
+            if not checkpoint or "channel_values" not in checkpoint:
+                continue
+
+            state = checkpoint["channel_values"]
+            messages = state.get("messages", [])
+            
+            if not messages:
+                continue
+
+            first_user_msg = next((msg.content for msg in messages if isinstance(msg, HumanMessage)), None)
+
+            title = "new conversation"
+            if first_user_msg:
+                title = first_user_msg.strip()[:60]
+                if len(first_user_msg) > 60:
+                    title += "..."
+
+            threads.append({
+                "thread_id": thread_id,
+                "title": title,
+                "message_count": len(messages)
+            })
+
+        return {
+            "user_id": user_id,
+            "total_threads": len(threads),
+            "threads": threads
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch user history: {str(e)}")
+
+    
 
 @app.post("/chat")
 async def chat(
