@@ -13,12 +13,12 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, RemoveMessage
 from langchain_core.runnables import Runnable
 
-from schema.schema import State
-from services.embedding_service import LocalEmbeddingService
-from services.pinecone_service import PineconeService
+from rag_workflow.schema.schema import State
+from rag_workflow.services.embedding_service import LocalEmbeddingService
+from rag_workflow.services.pinecone_service import PineconeService
 
 
-from prompts.prompt import (
+from rag_workflow.prompts.prompt import (
     classifier_prompt,
     general_prompt,
     general_prompt1,
@@ -30,7 +30,7 @@ from prompts.prompt import (
     ocr_formatter_prompt
 )
 
-from models.model import (
+from rag_workflow.models.model import (
     classifier_model,
     # flash_2_5,
     groq_llm,

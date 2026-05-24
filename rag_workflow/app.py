@@ -19,7 +19,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 
 from pinecone import Pinecone
 
-from main import builder
+from rag_workflow.main import builder
 # builder = None
 
 from dotenv import load_dotenv
@@ -39,9 +39,9 @@ except Exception as e:
 
 
 ########### init ##############
-from services.embedding_service import LocalEmbeddingService
-from services.file_service import FileService
-from services.pinecone_service import PineconeService
+from rag_workflow.services.embedding_service import LocalEmbeddingService
+from rag_workflow.services.file_service import FileService
+from rag_workflow.services.pinecone_service import PineconeService
 
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
         conninfo=PostgresURL,
         min_size=2,
         max_size=15,
-        kwargs={
+        kwargs={  # these kwargs defines how connection with pg behaves.
             "autocommit": True,
             "row_factory": dict_row,
             "prepare_threshold": None, 
