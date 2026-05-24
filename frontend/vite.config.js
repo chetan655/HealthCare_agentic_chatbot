@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_URL,
           changeOrigin: true,
         },
+        "/auth": {
+          target: env.VITE_API_URL,
+          changeOrigin: true,
+        },
       },
     },
   };

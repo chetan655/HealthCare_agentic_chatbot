@@ -64,10 +64,11 @@ if (!import.meta.env.DEV && !API_BASE) {
   throw new Error("VITE_API_URL is not defined");
 }
 
-export async function sendMessage(question, threadId, lat, long, imageFile) {
+export async function sendMessage(question, threadId, userId, lat, long, imageFile) {
   const formData = new FormData();
   formData.append("question", question);
   formData.append("thread_id", threadId);
+  formData.append("user_id", userId);
   formData.append("lat", lat);
   formData.append("long", long);
 
@@ -132,5 +133,57 @@ export async function getChatHistory(threadId) {
   if (!response.ok) {
     throw new Error(`Server error: ${response.status}`);
   }
+  return response.json();
+}
+
+export async function loginUser(email, password) {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Login failed";
+    try {
+      const text = await response.text();
+      if (text) {
+        const errorData = JSON.parse(text);
+        errorMsg = errorData.detail || errorMsg;
+      }
+    } catch (e) {
+      // Ignored
+    }
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+export async function signupUser(email, full_name, password) {
+  const response = await fetch(`${API_BASE}/auth/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, full_name, password }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Signup failed";
+    try {
+      const text = await response.text();
+      if (text) {
+        const errorData = JSON.parse(text);
+        errorMsg = errorData.detail || errorMsg;
+      }
+    } catch (e) {
+      // Ignored
+    }
+    throw new Error(errorMsg);
+  }
+
   return response.json();
 }

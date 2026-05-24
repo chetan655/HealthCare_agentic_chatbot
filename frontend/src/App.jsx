@@ -5,9 +5,27 @@ import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
 import AgentBadge from './components/AgentBadge';
-import { HeartPulse, Menu, X } from 'lucide-react';
+import { HeartPulse, Menu, X, LogOut } from 'lucide-react';
+import Auth from './components/Auth';
 
 export default function App() {
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    if (saved) return JSON.parse(saved);
+    return null;
+  });
+
+  const handleLogin = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('thread_id');
+    setUser(null);
+  };
+
   const [threadId, setThreadId] = useState(() => {
     const saved = sessionStorage.getItem('thread_id');
     if (saved) return saved;
@@ -68,6 +86,7 @@ export default function App() {
         const response = await sendMessage(
           text,
           threadId,
+          user.user_id,
           location.lat,
           location.long,
           imageFile
@@ -97,14 +116,14 @@ export default function App() {
           {
             role: 'ai',
             content:
-              'I apologize, but I encountered an issue processing your request. Please try again.',
+              `Error: ${err.message}. Please try again.`,
           },
         ]);
       } finally {
         setIsStreaming(false);
       }
     },
-    [isStreaming, threadId, location]
+    [isStreaming, threadId, location, user]
   );
 
   const handleSuggestionClick = useCallback(
@@ -125,6 +144,10 @@ export default function App() {
       e.target.value = '';
     }
   };
+
+  if (!user) {
+    return <Auth onLogin={handleLogin} />;
+  }
 
   return (
     <div className="h-dvh flex bg-surface">
@@ -171,8 +194,20 @@ export default function App() {
               <AgentBadge agent={activeAgent} />
             </div>
           </div>
-          <div className="lg:hidden">
-            <AgentBadge agent={activeAgent} />
+          <div className="flex items-center gap-3">
+            <div className="lg:hidden">
+              <AgentBadge agent={activeAgent} />
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-text-secondary bg-surface-alt px-3 py-1.5 rounded-full">
+              <span>{user.full_name}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-text-muted hover:text-red-500 bg-surface-alt hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
