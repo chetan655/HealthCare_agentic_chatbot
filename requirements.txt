@@ -6,7 +6,8 @@ langchain-core==0.3.76
 langchain-community==0.3.26
 
 langgraph==0.6.5
-langgraph-checkpoint-postgres==2.0.24
+# langgraph-checkpoint-postgres==2.0.24
+langgraph-checkpoint-sqlite==3.1.0
 
 langchain-groq==0.3.8
 langchain-tavily==0.2.11

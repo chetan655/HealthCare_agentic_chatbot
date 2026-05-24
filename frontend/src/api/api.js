@@ -55,11 +55,12 @@
 //   return 'general';
 // }
 
-// Always use backend URL (works in both dev + production)
-const API_BASE = import.meta.env.VITE_API_URL;
+// In development, we use an empty string so requests go through the Vite proxy (preventing CORS errors).
+// In production, we use the VITE_API_URL directly.
+const API_BASE = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
 
-// Fail fast if env missing (prevents silent bugs)
-if (!API_BASE) {
+// Fail fast if env missing in production (prevents silent bugs)
+if (!import.meta.env.DEV && !API_BASE) {
   throw new Error("VITE_API_URL is not defined");
 }
 
@@ -124,4 +125,12 @@ export function inferAgent(question, hasImage) {
   ];
   if (hospitalKeywords.some((kw) => q.includes(kw))) return "hospital";
   return "general";
+}
+
+export async function getChatHistory(threadId) {
+  const response = await fetch(`${API_BASE}/chat/history?thread_id=${threadId}&limit=50`);
+  if (!response.ok) {
+    throw new Error(`Server error: ${response.status}`);
+  }
+  return response.json();
 }

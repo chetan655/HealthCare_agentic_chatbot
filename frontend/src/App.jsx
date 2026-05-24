@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { sendMessage, getLocation, inferAgent } from './api/api';
+import { sendMessage, getLocation, inferAgent, getChatHistory } from './api/api';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
@@ -8,7 +8,13 @@ import AgentBadge from './components/AgentBadge';
 import { HeartPulse, Menu, X } from 'lucide-react';
 
 export default function App() {
-  const [threadId, setThreadId] = useState(() => uuidv4());
+  const [threadId, setThreadId] = useState(() => {
+    const saved = sessionStorage.getItem('thread_id');
+    if (saved) return saved;
+    const newId = uuidv4();
+    sessionStorage.setItem('thread_id', newId);
+    return newId;
+  });
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeAgent, setActiveAgent] = useState('general');
@@ -18,10 +24,26 @@ export default function App() {
 
   useEffect(() => {
     getLocation().then(setLocation);
+    
+    // Load chat history for the current session threadId
+    getChatHistory(threadId)
+      .then((data) => {
+        if (data && data.messages && data.messages.length > 0) {
+          const loadedMessages = data.messages.map((msg) => ({
+            role: msg.role === 'assistant' ? 'ai' : 'user',
+            content: msg.content,
+          }));
+          setMessages(loadedMessages);
+        }
+      })
+      .catch((err) => console.error("Failed to load history:", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleNewChat = useCallback(() => {
-    setThreadId(uuidv4());
+    const newId = uuidv4();
+    sessionStorage.setItem('thread_id', newId);
+    setThreadId(newId);
     setMessages([]);
     setActiveAgent('general');
     setMobileMenuOpen(false);
