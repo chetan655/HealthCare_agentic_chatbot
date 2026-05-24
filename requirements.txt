@@ -15,7 +15,7 @@ langchain-google-genai==2.0.10
 
 pinecone==7.3.0
 
-psycopg[binary]==3.2.10
+# psycopg[binary]==3.2.10
 
 aiohttp==3.12.13
 httpx==0.28.1
