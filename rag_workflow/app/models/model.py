@@ -1,10 +1,10 @@
-from rag_workflow.schema.schema import ClassifierModelSchema
+from rag_workflow.app.schema.schema import ClassifierModelSchema
 
 from langchain_groq import ChatGroq
 # from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import ToolNode
 
-from rag_workflow.tools.tools import search ,find_nearby_hospitals
+from rag_workflow.app.tools.tools import search ,find_nearby_hospitals
 
 from dotenv import load_dotenv
 

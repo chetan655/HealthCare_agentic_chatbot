@@ -1,30 +1,28 @@
 fastapi==0.117.1
 uvicorn[standard]==0.35.0
 
-langchain==0.3.26
-langchain-core==0.3.76
-langchain-community==0.3.26
+langchain
+langchain-community
 
-langgraph==0.6.5
-langgraph-checkpoint-sqlite==3.1.0
+langgraph
+langgraph-checkpoint-sqlite
 
-langchain-groq==0.3.8
-langchain-tavily==0.2.11
-langchain-google-genai==2.0.10
+langchain-groq
+langchain-tavily
+langchain-google-genai
 
-pinecone==7.3.0
+pinecone
 
-aiohttp==3.12.13
-httpx==0.28.1
-requests==2.32.4
+sentence-transformers
 
-pydantic==2.11.7
-python-dotenv==1.1.1
-python-multipart==0.0.20
+aiohttp
+httpx
+requests
 
-Pillow==11.0.0
-sentence_transformers
+python-dotenv
+python-multipart
 
-passlib[bcrypt]==1.7.4
-bcrypt==4.3.0
-email-validator==2.2.0
+Pillow
+
+passlib[bcrypt]
+email-validator

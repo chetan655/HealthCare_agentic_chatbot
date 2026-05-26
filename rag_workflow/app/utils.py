@@ -1,6 +1,6 @@
 
 
-from rag_workflow.schema.schema import State
+from rag_workflow.app.schema.schema import State
 
 
 def check_query_category(state: State):

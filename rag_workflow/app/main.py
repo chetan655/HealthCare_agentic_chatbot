@@ -10,7 +10,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from langchain_core.messages import AIMessage, AIMessageChunk
 
-from rag_workflow.utils import (
+from rag_workflow.app.utils import (
     check_query_category,
     route_after_tools
 )
@@ -23,9 +23,9 @@ PostgresURL = os.getenv("PostgresURL")
 
 # tools = []
 
-from rag_workflow.schema.schema import State
+from rag_workflow.app.schema.schema import State
 
-from rag_workflow.node.node import (
+from rag_workflow.app.node.node import (
     classifier,
     general,
     general_formatter,
@@ -38,7 +38,7 @@ from rag_workflow.node.node import (
     memory
 )
 
-from rag_workflow.models.model import tool_node
+from rag_workflow.app.models.model import tool_node
 
 
 builder = StateGraph(State)

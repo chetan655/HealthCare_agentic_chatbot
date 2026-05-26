@@ -39,102 +39,107 @@ def search(query: str) -> str:
 
 
 ######################3 find nearby hospitals ######################
+import math
+import requests
+from typing import List, Dict
 
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Calculate the distance between two lat/lon points using Haversine formula.
-    Returns distance in kilometers.
-    """
-    # ensure numeric inputs
-    # print("lat", lat)
+def haversine_distance(lat1, lon1, lat2, lon2) -> float:
+    """Calculate distance in kilometers."""
     try:
         lat1, lon1, lat2, lon2 = map(float, (lat1, lon1, lat2, lon2))
     except (TypeError, ValueError):
         return float("inf")
-
+    
     R = 6371  # Earth radius in km
-
     d_lat = math.radians(lat2 - lat1)
     d_lon = math.radians(lon2 - lon1)
-
+    
     a = (math.sin(d_lat / 2) ** 2 +
          math.cos(math.radians(lat1)) *
          math.cos(math.radians(lat2)) *
          math.sin(d_lon / 2) ** 2)
-
+    
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
     return R * c
 
-def find_nearby_hospitals_with_distance(lat, long, radius=5000):
+
+def find_nearby_hospitals_with_distance(lat, lon, radius: int = 5000) -> List[Dict]:
+    """Main function to fetch nearby hospitals."""
     try:
         lat = float(lat)
-        long = float(long)
-    except Exception as e:
-        print(f"invalid coordinated provided: {lat}, {long}")
+        lon = float(lon)
+    except (TypeError, ValueError):
+        print(f"Invalid coordinates: {lat}, {lon}")
         return []
-    
+
     query = f"""
-    [out:json];
+    [out:json][timeout:30];
     (
-      node["amenity"="hospital"](around:{radius},{lat},{long});
-      way["amenity"="hospital"](around:{radius},{lat},{long});
-      relation["amenity"="hospital"](around:{radius},{lat},{long});
+      node["amenity"="hospital"](around:{radius},{lat},{lon});
+      way["amenity"="hospital"](around:{radius},{lat},{lon});
+      relation["amenity"="hospital"](around:{radius},{lat},{lon});
     );
     out center;
     """
 
     url = "https://overpass-api.de/api/interpreter"
+    
+    headers = {
+        'User-Agent': 'HospitalFinderApp/1.0 (Grok Assisted - chetan@hisar)',
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
 
     try:
-        response = requests.post(url, data={"data": query}, timeout=10)
+        response = requests.post(url, headers=headers, data={'data': query}, timeout=20)
         response.raise_for_status()
         data = response.json()
-    except Exception:
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error {response.status_code}: {e}")
+        if hasattr(response, 'text'):
+            print("Response:", response.text[:400])
         return []
-    
+    except Exception as e:
+        print(f"Error fetching hospitals: {e}")
+        return []
+
     hospitals = []
     for item in data.get("elements", []):
-        name = item.get("tags", {}).get("name", "Unknown Hospital")
+        tags = item.get("tags", {})
+        name = tags.get("name", "Unknown Hospital")
 
-        # Prefer node lat/lon, otherwise use center
         if "lat" in item and "lon" in item:
-            h_lat = item.get("lat")
-            h_lon = item.get("lon")
+            h_lat = item["lat"]
+            h_lon = item["lon"]
         else:
             center = item.get("center") or {}
             h_lat = center.get("lat")
             h_lon = center.get("lon")
 
-        # Skip if coordinates missing
         if h_lat is None or h_lon is None:
             continue
 
-        # ensure floats
         try:
             h_lat = float(h_lat)
             h_lon = float(h_lon)
-        except (TypeError, ValueError):
+            distance = haversine_distance(lat, lon, h_lat, h_lon)
+            
+            hospitals.append({
+                "name": name,
+                "distance_km": round(distance, 2),
+                "lat": round(h_lat, 6),
+                "lon": round(h_lon, 6),
+            })
+        except Exception:
             continue
-
-        # Calculate distance
-        distance = haversine_distance(lat, long, h_lat, h_lon)
-
-        hospitals.append({
-            "name": name,
-            "distance_km": round(distance, 2)
-        })
 
     hospitals.sort(key=lambda x: x["distance_km"])
     return hospitals
 
 
 @tool
-def find_nearby_hospitals(lat: str , long: str):
-    """ use this tool to find nearby hospitals."""
-
-    hospitals = find_nearby_hospitals_with_distance(lat=lat, long=long, radius=5000)
-
-    print("hospitals", hospitals)
-
+def find_nearby_hospitals(lat: str, long: str):
+    """Use this tool to find nearby hospitals."""
+    hospitals = find_nearby_hospitals_with_distance(lat=lat, lon=long, radius=5000)
+    # print(f"Found {len(hospitals)} hospitals")
     return hospitals

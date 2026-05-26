@@ -91,6 +91,7 @@ def geocode_location(place_name):
     }
 
     response = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
+    print("this is res", response)
     data = response.json()
 
     if not data:
