@@ -59,7 +59,7 @@ class PineconeService:
         
         try:
             self.index.upsert(
-                [(upsert_id, vector, metadata)],
+                vectors=[(upsert_id, vector, metadata)],
                 namespace=namespace
             )
         except Exception as e:

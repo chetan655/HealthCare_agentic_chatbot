@@ -25,7 +25,7 @@ from langchain_core.messages import HumanMessage
 
 from pinecone import Pinecone
 
-from rag_workflow.app.main import builder
+from app.main import builder
 # builder = None
 
 from dotenv import load_dotenv
@@ -48,9 +48,9 @@ except Exception as e:
 
 
 ########### init ##############
-from rag_workflow.app.services.embedding_service import LocalEmbeddingService
-from rag_workflow.app.services.file_service import FileService
-from rag_workflow.app.services.pinecone_service import PineconeService
+from app.services.embedding_service import LocalEmbeddingService
+from app.services.file_service import FileService
+from app.services.pinecone_service import PineconeService
 
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
