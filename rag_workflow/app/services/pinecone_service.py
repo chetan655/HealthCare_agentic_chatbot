@@ -17,9 +17,6 @@ class PineconeService:
         if not self.index_name:
             raise Exception("Pinecone index_name is None.")
 
-        if self.api_key:
-            self._initialize()
-
     def _initialize(self):
         try:
             self.pc = Pinecone(api_key=self.api_key)
@@ -40,7 +37,7 @@ class PineconeService:
         
     def get_index(self):
         if not self.pinecone_initialized:
-            raise Exception("Pinecone not initialized.")
+            self._initialize()
         print("pinecone index success.")
         return self.index
     
@@ -52,7 +49,7 @@ class PineconeService:
             namespace: str | None = None # this is like folder inside db
     ):
         if not self.pinecone_initialized:
-            raise Exception("Pinecone not initialized.")
+            self._initialize()
         
         if vector is None:
             raise ValueError("Vector cannot be None.")
@@ -66,6 +63,8 @@ class PineconeService:
             raise Exception("Pinecone upsert error: ",e)
         
     def retrieve(self, query, embedding_model, namespace: str | None = "__default__"):
+        if not self.pinecone_initialized:
+            self._initialize()
         if not query:
             return None
         

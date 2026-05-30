@@ -35,11 +35,14 @@ class GeminiEmbeddingService:
 class LocalEmbeddingService:
 
     def __init__(self):
-        self.model = SentenceTransformer("BAAI/bge-small-en")
+        self.model = None
 
     def get_embedding(self, text: str | None = None) -> None | str:
         if not text:
             return None
+        
+        if self.model is None:
+            self.model = SentenceTransformer("BAAI/bge-small-en")
         
         try:
             emb = self.model.encode(text)
